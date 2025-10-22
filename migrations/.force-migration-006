@@ -1,0 +1,11 @@
+# Force Railway to re-run migration 006
+# Reason: Master Admin user (ozgurhzm@hzmsoft.com) not created
+# Date: 2025-10-22
+
+This file triggers Railway redeploy to ensure 006_create_master_admin.sql runs.
+
+Expected outcome:
+- User: ozgurhzm@hzmsoft.com
+- Password: 135427
+- Role: master_admin
+- Status: Active
