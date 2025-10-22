@@ -40,7 +40,28 @@ async function runMigrations() {
       logger.info(`Running migration: ${file}`);
       
       const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
-      await pool.query(sql);
+      
+      // Split SQL into statements and execute each separately
+      // This allows DROP IF EXISTS to work properly
+      const statements = sql
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0 && !s.startsWith('--'));
+      
+      for (const statement of statements) {
+        try {
+          await pool.query(statement);
+        } catch (error) {
+          // Log but continue for idempotent operations
+          if (error.code === '42P07' || // relation already exists
+              error.code === '42710' || // policy already exists  
+              error.code === '42P16') { // trigger already exists
+            logger.warn(`⚠️  Skipping statement (already exists): ${error.message}`);
+          } else {
+            throw error;
+          }
+        }
+      }
       
       // Record migration as executed
       await pool.query(
