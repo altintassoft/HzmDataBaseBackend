@@ -3,7 +3,9 @@
 -- Author: HZM Platform
 -- Date: 2025-10-22
 
--- Insert Master Admin user (if not exists)
+-- Clean insert (delete if exists, then insert)
+DELETE FROM core.users WHERE email = 'ozgurhzm@hzmsoft.com';
+
 INSERT INTO core.users (
   tenant_id,
   email,
@@ -13,7 +15,7 @@ INSERT INTO core.users (
   created_at,
   updated_at
 )
-SELECT
+VALUES (
   1,
   'ozgurhzm@hzmsoft.com',
   '$2b$10$YcCewJ5gTNKVdZTJw.L5qOU3/Cgaanc2ha.Ulwr45DE.vzUTDhyRO',
@@ -21,7 +23,5 @@ SELECT
   true,
   NOW(),
   NOW()
-WHERE NOT EXISTS (
-  SELECT 1 FROM core.users WHERE email = 'ozgurhzm@hzmsoft.com'
 );
 
