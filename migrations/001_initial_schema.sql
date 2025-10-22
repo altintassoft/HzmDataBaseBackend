@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS core.tenants (
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_tenants_slug ON core.tenants(slug);
-CREATE INDEX idx_tenants_active ON core.tenants(is_active) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_tenants_slug ON core.tenants(slug);
+CREATE INDEX IF NOT EXISTS idx_tenants_active ON core.tenants(is_active) WHERE is_deleted = FALSE;
 
 -- Users
 CREATE TABLE IF NOT EXISTS core.users (
@@ -83,9 +83,9 @@ CREATE TABLE IF NOT EXISTS core.users (
   UNIQUE(tenant_id, email)
 );
 
-CREATE INDEX idx_users_tenant ON core.users(tenant_id);
-CREATE INDEX idx_users_email ON core.users(email);
-CREATE INDEX idx_users_active ON core.users(is_active) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_users_tenant ON core.users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON core.users(email);
+CREATE INDEX IF NOT EXISTS idx_users_active ON core.users(is_active) WHERE is_deleted = FALSE;
 
 -- RLS Policies for Users
 ALTER TABLE core.users ENABLE ROW LEVEL SECURITY;
