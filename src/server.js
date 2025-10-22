@@ -13,6 +13,7 @@ const projectRoutes = require('./routes/projects');
 const genericDataRoutes = require('./routes/generic-data');
 const debugRoutes = require('./routes/debug');
 const adminRoutes = require('./routes/admin');
+const apiKeysRoutes = require('./routes/api-keys');
 
 // Create Express app
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/generic-data', genericDataRoutes);
 app.use('/api/v1/debug', debugRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/api-keys', apiKeysRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
