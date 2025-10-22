@@ -22,6 +22,17 @@ router.get('/database', async (req, res) => {
   try {
     const { type, include, schema, table, limit, offset } = req.query;
 
+    // 🐛 DEBUG: Log incoming request
+    logger.info('Admin database request:', {
+      type,
+      include,
+      schema,
+      table,
+      limit,
+      offset,
+      fullQuery: req.query
+    });
+
     // Validate type
     if (!type || !ALLOWED_TYPES.includes(type)) {
       return res.status(400).json({
