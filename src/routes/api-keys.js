@@ -31,7 +31,7 @@ const generateApiPassword = () => {
 
 // ============================================================================
 // GET /api/v1/api-keys/me
-// Get current user's API key info (without password)
+// Get current user's API key info (WITH password - plain text for now)
 // ============================================================================
 router.get('/me', async (req, res) => {
   try {
@@ -44,6 +44,7 @@ router.get('/me', async (req, res) => {
         id,
         email,
         api_key,
+        api_password,
         api_key_created_at,
         api_key_last_used_at
       FROM core.users
@@ -64,6 +65,7 @@ router.get('/me', async (req, res) => {
       data: {
         email: user.email,
         apiKey: user.api_key || null,
+        apiPassword: user.api_password || null,
         hasApiKey: !!user.api_key,
         createdAt: user.api_key_created_at,
         lastUsedAt: user.api_key_last_used_at
@@ -93,18 +95,19 @@ router.post('/generate', async (req, res) => {
     const apiPassword = generateApiPassword();
     const apiKeyHash = await bcrypt.hash(apiPassword, 10);
 
-    // Update user with new API credentials
+    // Update user with new API credentials (storing password as plain text for now)
     const result = await pool.query(`
       UPDATE core.users
       SET 
         api_key = $1,
-        api_key_hash = $2,
+        api_password = $2,
+        api_key_hash = $3,
         api_key_created_at = NOW(),
         api_key_last_used_at = NULL,
         updated_at = NOW()
-      WHERE email = $3
-      RETURNING id, email, api_key, api_key_created_at;
-    `, [apiKey, apiKeyHash, userEmail]);
+      WHERE email = $4
+      RETURNING id, email, api_key, api_password, api_key_created_at;
+    `, [apiKey, apiPassword, apiKeyHash, userEmail]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -199,13 +202,14 @@ router.post('/regenerate-password', async (req, res) => {
     const result = await pool.query(`
       UPDATE core.users
       SET 
-        api_key_hash = $1,
+        api_password = $1,
+        api_key_hash = $2,
         api_key_created_at = NOW(),
         api_key_last_used_at = NULL,
         updated_at = NOW()
-      WHERE email = $2 AND api_key IS NOT NULL
-      RETURNING id, email, api_key, api_key_created_at;
-    `, [apiKeyHash, userEmail]);
+      WHERE email = $3 AND api_key IS NOT NULL
+      RETURNING id, email, api_key, api_password, api_key_created_at;
+    `, [apiPassword, apiKeyHash, userEmail]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -247,6 +251,7 @@ router.delete('/revoke', async (req, res) => {
       UPDATE core.users
       SET 
         api_key = NULL,
+        api_password = NULL,
         api_key_hash = NULL,
         api_key_created_at = NULL,
         api_key_last_used_at = NULL,
