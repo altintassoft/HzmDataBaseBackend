@@ -365,5 +365,211 @@ router.post('/test', async (req, res) => {
   }
 });
 
+// ============================================================================
+// GET /api/v1/api-keys/master-admin
+// Get Master Admin API credentials (only for admin users)
+// ============================================================================
+router.get('/master-admin', async (req, res) => {
+  try {
+    // TODO: Check if current user is admin (req.user.role === 'admin')
+    // For now, allow access for testing
+    
+    const result = await pool.query(`
+      SELECT 
+        id,
+        email,
+        role,
+        api_key,
+        api_password,
+        api_key_created_at,
+        api_key_last_used_at
+      FROM core.users
+      WHERE email = 'ozgurhzm@hzmsoft.com' AND role = 'master_admin';
+    `);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Master Admin user not found'
+      });
+    }
+
+    const masterAdmin = result.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        email: masterAdmin.email,
+        role: masterAdmin.role,
+        apiKey: masterAdmin.api_key || null,
+        apiPassword: masterAdmin.api_password || null,
+        hasApiKey: !!masterAdmin.api_key,
+        createdAt: masterAdmin.api_key_created_at,
+        lastUsedAt: masterAdmin.api_key_last_used_at
+      }
+    });
+
+  } catch (error) {
+    logger.error('Get Master Admin API key error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// POST /api/v1/api-keys/master-admin/generate
+// Generate API credentials for Master Admin
+// ============================================================================
+router.post('/master-admin/generate', async (req, res) => {
+  try {
+    // TODO: Check if current user is admin
+    
+    // Generate new API key and password
+    const apiKey = generateApiKey();
+    const apiPassword = generateApiPassword();
+    const apiKeyHash = await bcrypt.hash(apiPassword, 10);
+
+    // Update Master Admin with new API credentials
+    const result = await pool.query(`
+      UPDATE core.users
+      SET 
+        api_key = $1,
+        api_password = $2,
+        api_key_hash = $3,
+        api_key_created_at = NOW(),
+        api_key_last_used_at = NULL,
+        updated_at = NOW()
+      WHERE email = 'ozgurhzm@hzmsoft.com' AND role = 'master_admin'
+      RETURNING id, email, role, api_key, api_password, api_key_created_at;
+    `, [apiKey, apiPassword, apiKeyHash]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Master Admin user not found'
+      });
+    }
+
+    logger.info('Master Admin API key generated');
+
+    res.json({
+      success: true,
+      message: 'Master Admin API credentials generated successfully',
+      data: {
+        apiKey,
+        apiPassword,
+        createdAt: result.rows[0].api_key_created_at
+      }
+    });
+
+  } catch (error) {
+    logger.error('Generate Master Admin API key error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// POST /api/v1/api-keys/master-admin/regenerate
+// Regenerate Master Admin API key (keeps password)
+// ============================================================================
+router.post('/master-admin/regenerate', async (req, res) => {
+  try {
+    // TODO: Check if current user is admin
+    
+    const apiKey = generateApiKey();
+
+    const result = await pool.query(`
+      UPDATE core.users
+      SET 
+        api_key = $1,
+        api_key_created_at = NOW(),
+        api_key_last_used_at = NULL,
+        updated_at = NOW()
+      WHERE email = 'ozgurhzm@hzmsoft.com' AND role = 'master_admin' AND api_password IS NOT NULL
+      RETURNING id, email, role, api_key, api_key_created_at;
+    `, [apiKey]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Master Admin user not found or no API credentials exist'
+      });
+    }
+
+    logger.info('Master Admin API key regenerated');
+
+    res.json({
+      success: true,
+      message: 'Master Admin API key regenerated successfully',
+      data: {
+        apiKey,
+        createdAt: result.rows[0].api_key_created_at
+      }
+    });
+
+  } catch (error) {
+    logger.error('Regenerate Master Admin API key error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// POST /api/v1/api-keys/master-admin/regenerate-password
+// Regenerate Master Admin API password (keeps key)
+// ============================================================================
+router.post('/master-admin/regenerate-password', async (req, res) => {
+  try {
+    // TODO: Check if current user is admin
+    
+    const apiPassword = generateApiPassword();
+    const apiKeyHash = await bcrypt.hash(apiPassword, 10);
+
+    const result = await pool.query(`
+      UPDATE core.users
+      SET 
+        api_password = $1,
+        api_key_hash = $2,
+        api_key_created_at = NOW(),
+        api_key_last_used_at = NULL,
+        updated_at = NOW()
+      WHERE email = 'ozgurhzm@hzmsoft.com' AND role = 'master_admin' AND api_key IS NOT NULL
+      RETURNING id, email, role, api_key, api_password, api_key_created_at;
+    `, [apiPassword, apiKeyHash]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Master Admin user not found or no API key exists'
+      });
+    }
+
+    logger.info('Master Admin API password regenerated');
+
+    res.json({
+      success: true,
+      message: 'Master Admin API password regenerated successfully',
+      data: {
+        apiPassword,
+        createdAt: result.rows[0].api_key_created_at
+      }
+    });
+
+  } catch (error) {
+    logger.error('Regenerate Master Admin API password error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
 
