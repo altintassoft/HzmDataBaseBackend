@@ -48,7 +48,7 @@ $$ LANGUAGE plpgsql;
 -- Core Tables
 
 -- Tenants
-CREATE TABLE core.tenants (
+CREATE TABLE IF NOT EXISTS core.tenants (
   id SERIAL PRIMARY KEY,
   name VARCHAR(200) NOT NULL,
   slug VARCHAR(100) UNIQUE NOT NULL,
@@ -68,7 +68,7 @@ CREATE INDEX idx_tenants_slug ON core.tenants(slug);
 CREATE INDEX idx_tenants_active ON core.tenants(is_active) WHERE is_deleted = FALSE;
 
 -- Users
-CREATE TABLE core.users (
+CREATE TABLE IF NOT EXISTS core.users (
   id SERIAL PRIMARY KEY,
   tenant_id INTEGER NOT NULL REFERENCES core.tenants(id),
   email VARCHAR(255) NOT NULL,
