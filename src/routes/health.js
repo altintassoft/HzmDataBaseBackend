@@ -22,13 +22,20 @@ router.get('/', async (req, res) => {
       responseTime: Date.now() - dbStart
     };
 
-    // Check Redis
-    const redisStart = Date.now();
-    await redis.ping();
-    health.checks.redis = {
-      status: 'ok',
-      responseTime: Date.now() - redisStart
-    };
+    // Check Redis (if configured)
+    if (redis) {
+      const redisStart = Date.now();
+      await redis.ping();
+      health.checks.redis = {
+        status: 'ok',
+        responseTime: Date.now() - redisStart
+      };
+    } else {
+      health.checks.redis = {
+        status: 'not_configured',
+        message: 'Redis not available'
+      };
+    }
 
     res.status(200).json(health);
   } catch (error) {
