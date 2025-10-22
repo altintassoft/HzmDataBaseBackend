@@ -90,14 +90,17 @@ CREATE INDEX IF NOT EXISTS idx_users_active ON core.users(is_active) WHERE is_de
 -- RLS Policies for Users
 ALTER TABLE core.users ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS users_tenant_isolation ON core.users;
 CREATE POLICY users_tenant_isolation ON core.users
   USING (tenant_id = app.current_tenant());
 
 -- Triggers
+DROP TRIGGER IF EXISTS trg_tenants_touch ON core.tenants;
 CREATE TRIGGER trg_tenants_touch
   BEFORE UPDATE ON core.tenants
   FOR EACH ROW EXECUTE FUNCTION app.touch_row();
 
+DROP TRIGGER IF EXISTS trg_users_touch ON core.users;
 CREATE TRIGGER trg_users_touch
   BEFORE UPDATE ON core.users
   FOR EACH ROW EXECUTE FUNCTION app.touch_row();
