@@ -11,6 +11,7 @@ const healthRoutes = require('./routes/health');
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
 const genericDataRoutes = require('./routes/generic-data');
+const debugRoutes = require('./routes/debug');
 
 // Create Express app
 const app = express();
@@ -34,6 +35,7 @@ app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/generic-data', genericDataRoutes);
+app.use('/api/v1/debug', debugRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
