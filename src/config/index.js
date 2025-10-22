@@ -31,7 +31,9 @@ const config = {
 
   // CORS
   cors: {
-    origins: (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',')
+    origins: process.env.CORS_ORIGINS 
+      ? process.env.CORS_ORIGINS.split(',')
+      : ['https://hzmdatabase.netlify.app', 'http://localhost:5173', 'http://localhost:5001']
   },
 
   // Frontend
