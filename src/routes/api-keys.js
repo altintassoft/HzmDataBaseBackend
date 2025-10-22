@@ -12,9 +12,9 @@ const router = express.Router();
 
 // Generate a secure random API key
 const generateApiKey = () => {
-  // Format: hzm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  const randomBytes = crypto.randomBytes(32).toString('hex');
-  return `hzm_${randomBytes}`;
+  // Format: hzm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (52 chars total)
+  const randomBytes = crypto.randomBytes(24).toString('hex'); // 24 bytes = 48 hex chars
+  return `hzm_${randomBytes}`; // hzm_ (4) + 48 = 52 chars (fits in VARCHAR(64))
 };
 
 // Generate a secure random API password
