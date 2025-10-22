@@ -17,10 +17,10 @@ INSERT INTO core.users (
 SELECT
   1,
   'ozgurhzm@hzmsoft.com',
-  '$2b$10$rN8xQ5XvH.kXJH5K7Z8xQu5J3K5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q',
+  '$2b$10$YcCewJ5gTNKVdZTJw.L5qOU3/Cgaanc2ha.Ulwr45DE.vzUTDhyRO',
   'master_admin',
   true,
-  'Master Admin System',
+  'Özgür Altıntaş - Master Admin',
   NOW(),
   NOW()
 WHERE NOT EXISTS (
