@@ -48,15 +48,22 @@ async function runMigrations() {
         .map(s => s.trim())
         .filter(s => s.length > 0 && !s.startsWith('--'));
       
-      for (const statement of statements) {
+      logger.info(`📝 Parsed ${statements.length} statements from ${file}`);
+      
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i];
+        logger.info(`🔹 Executing statement ${i + 1}/${statements.length}: ${statement.substring(0, 60)}...`);
+        
         try {
-          await pool.query(statement);
+          const result = await pool.query(statement);
+          logger.info(`✅ Statement ${i + 1} executed successfully`);
         } catch (error) {
+          logger.error(`❌ Statement ${i + 1} failed: ${error.message} (code: ${error.code})`);
           // Log but continue for idempotent operations
           if (error.code === '42P07' || // relation already exists
               error.code === '42710' || // policy already exists  
               error.code === '42P16') { // trigger already exists
-            logger.warn(`⚠️  Skipping statement (already exists): ${error.message}`);
+            logger.warn(`⚠️  Skipping statement (already exists)`);
           } else {
             throw error;
           }
