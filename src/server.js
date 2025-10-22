@@ -1,0 +1,95 @@
+const express = require('express');
+const cors = require('cors');
+const config = require('./config');
+const logger = require('./utils/logger');
+const { initDatabase } = require('./config/database');
+const { initRedis } = require('./config/redis');
+
+// Import routes
+const healthRoutes = require('./routes/health');
+const authRoutes = require('./routes/auth');
+const projectRoutes = require('./routes/projects');
+const genericDataRoutes = require('./routes/generic-data');
+
+// Create Express app
+const app = express();
+
+// Middleware
+app.use(cors({
+  origin: config.cors.origins,
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`);
+  next();
+});
+
+// Routes
+app.use('/health', healthRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/projects', projectRoutes);
+app.use('/api/v1/generic-data', genericDataRoutes);
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'HZM Platform API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      auth: '/api/v1/auth',
+      projects: '/api/v1/projects',
+      genericData: '/api/v1/generic-data'
+    }
+  });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: config.isDevelopment ? err.message : undefined
+  });
+});
+
+// Initialize and start server
+const startServer = async () => {
+  try {
+    // Initialize database
+    logger.info('Initializing database...');
+    await initDatabase();
+
+    // Initialize Redis
+    logger.info('Initializing Redis...');
+    await initRedis();
+
+    // Start server
+    app.listen(config.port, '0.0.0.0', () => {
+      logger.info(`🚀 HZM Platform API running on port ${config.port}`);
+      logger.info(`📊 Environment: ${config.nodeEnv}`);
+      logger.info(`🔗 Frontend URL: ${config.frontendUrl}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully...');
+  process.exit(0);
+});
+
+startServer();
