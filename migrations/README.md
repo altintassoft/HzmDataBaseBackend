@@ -4,6 +4,51 @@
 
 ---
 
+## ⚠️ ÖNEMLİ: MIGRATIONS NE İÇİN KULLANILIR?
+
+### ✅ MIGRATIONS İLE YAPILACAKLAR (Schema İşlemleri - DDL):
+
+- 📦 **Tablo oluşturma** (CREATE TABLE)
+- 🗑️ **Tablo silme** (DROP TABLE)
+- ➕ **Kolon ekleme** (ALTER TABLE ADD COLUMN)
+- ➖ **Kolon silme** (ALTER TABLE DROP COLUMN)
+- 🔧 **Kolon düzeltme** (ALTER TABLE ALTER COLUMN)
+- 📊 **Index ekleme** (CREATE INDEX)
+- 🔗 **Foreign key ekleme** (ADD CONSTRAINT)
+- 🔒 **RLS policy ekleme** (CREATE POLICY)
+
+**Örnek:**
+```sql
+-- migrations/008_add_full_name_to_users.sql
+ALTER TABLE core.users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);
+```
+
+---
+
+### ❌ MIGRATIONS İLE YAPILMAYACAKLAR (Veri İşlemleri - CRUD):
+
+- ❌ **Veri ekleme** (INSERT) → Master Admin API Key ile yapılacak!
+- ❌ **Veri okuma** (SELECT) → Master Admin API Key ile yapılacak!
+- ❌ **Veri güncelleme** (UPDATE) → Master Admin API Key ile yapılacak!
+- ❌ **Veri silme** (DELETE) → Master Admin API Key ile yapılacak!
+
+**Bunun yerine:**
+```bash
+# Master Admin API Key + curl kullan!
+curl -H "X-API-Key: hzm_xxx" \
+     -H "X-API-Password: xxx" \
+     'https://hzmdatabasebackend-production.up.railway.app/api/v1/protected/data'
+```
+
+---
+
+### 📄 DETAYLI DOKÜMANTASYON:
+
+- **Veri işlemleri (CRUD):** `../DATABASE_OPERATIONS.md` veya `../API_AUTHENTICATION.md`
+- **Schema işlemleri (DDL):** Bu dosya (`migrations/README.md`)
+
+---
+
 ## 📚 Mevcut Migration'lar
 
 ### PHASE 1 - FOUNDATION & SECURITY 🔥 (ACTIVE)
