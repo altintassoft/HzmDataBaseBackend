@@ -14,6 +14,7 @@ const genericDataRoutes = require('./routes/generic-data');
 const debugRoutes = require('./routes/debug');
 const adminRoutes = require('./routes/admin');
 const apiKeysRoutes = require('./routes/api-keys');
+const protectedRoutes = require('./routes/protected');
 
 // Create Express app
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/v1/generic-data', genericDataRoutes);
 app.use('/api/v1/debug', debugRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/api-keys', apiKeysRoutes);
+app.use('/api/v1/protected', protectedRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -53,7 +55,13 @@ app.get('/', (req, res) => {
       projects: '/api/v1/projects',
       genericData: '/api/v1/generic-data',
       admin: '/api/v1/admin/database',
-      debug: '/api/v1/debug'
+      debug: '/api/v1/debug',
+      protected: '/api/v1/protected (requires API Key + Password)',
+      apiKeys: '/api/v1/api-keys'
+    },
+    authentication: {
+      web: 'JWT Token (Authorization: Bearer <token>)',
+      api: 'API Key + Password (X-API-Key & X-API-Password headers)'
     }
   });
 });
