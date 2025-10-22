@@ -44,5 +44,124 @@ router.get('/schemas', async (req, res) => {
   }
 });
 
+// Get table data with column info
+router.get('/table/:schema/:table/data', async (req, res) => {
+  try {
+    const { schema, table } = req.params;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
+
+    // Security: Only allow specific schemas
+    const allowedSchemas = ['core', 'app', 'cfg', 'ops', 'public'];
+    if (!allowedSchemas.includes(schema)) {
+      return res.status(403).json({ error: 'Schema not allowed' });
+    }
+
+    // Get column information
+    const columnsResult = await pool.query(`
+      SELECT 
+        column_name,
+        data_type,
+        character_maximum_length,
+        is_nullable,
+        column_default
+      FROM information_schema.columns
+      WHERE table_schema = $1 AND table_name = $2
+      ORDER BY ordinal_position;
+    `, [schema, table]);
+
+    // Get row count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM ${schema}.${table};`
+    );
+
+    // Get data
+    const dataResult = await pool.query(
+      `SELECT * FROM ${schema}.${table} ORDER BY id LIMIT $1 OFFSET $2;`,
+      [limit, offset]
+    );
+
+    res.json({
+      schema,
+      table,
+      columns: columnsResult.rows,
+      total: parseInt(countResult.rows[0].total),
+      limit,
+      offset,
+      data: dataResult.rows
+    });
+  } catch (error) {
+    logger.error('Get table data error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get table structure (columns, indexes, constraints)
+router.get('/table/:schema/:table/structure', async (req, res) => {
+  try {
+    const { schema, table } = req.params;
+
+    // Security: Only allow specific schemas
+    const allowedSchemas = ['core', 'app', 'cfg', 'ops', 'public'];
+    if (!allowedSchemas.includes(schema)) {
+      return res.status(403).json({ error: 'Schema not allowed' });
+    }
+
+    // Get columns
+    const columns = await pool.query(`
+      SELECT 
+        column_name,
+        data_type,
+        character_maximum_length,
+        is_nullable,
+        column_default
+      FROM information_schema.columns
+      WHERE table_schema = $1 AND table_name = $2
+      ORDER BY ordinal_position;
+    `, [schema, table]);
+
+    // Get indexes
+    const indexes = await pool.query(`
+      SELECT
+        indexname,
+        indexdef
+      FROM pg_indexes
+      WHERE schemaname = $1 AND tablename = $2;
+    `, [schema, table]);
+
+    // Get foreign keys
+    const foreignKeys = await pool.query(`
+      SELECT
+        tc.constraint_name,
+        kcu.column_name,
+        ccu.table_schema AS foreign_table_schema,
+        ccu.table_name AS foreign_table_name,
+        ccu.column_name AS foreign_column_name
+      FROM information_schema.table_constraints AS tc
+      JOIN information_schema.key_column_usage AS kcu
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage AS ccu
+        ON ccu.constraint_name = tc.constraint_name
+        AND ccu.table_schema = tc.table_schema
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema = $1
+        AND tc.table_name = $2;
+    `, [schema, table]);
+
+    res.json({
+      schema,
+      table,
+      columns: columns.rows,
+      indexes: indexes.rows,
+      foreignKeys: foreignKeys.rows
+    });
+  } catch (error) {
+    logger.error('Get table structure error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
+
 
