@@ -1,4 +1,4 @@
--- Migration: 003_add_api_keys.sql
+-- Migration: 004_add_api_keys.sql
 -- Description: Add API Key and API Password support for users
 -- Author: HZM Platform
 -- Date: 2025-10-22
