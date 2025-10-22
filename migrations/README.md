@@ -16,9 +16,10 @@
 | 004 | `fix_api_key_length.sql` | VARCHAR(64) → VARCHAR(100) | ✅ Production | P0 |
 | 005 | `add_api_password_plain.sql` | API Password column (plain text) | ⚠️ Production | P0 |
 | 006 | `create_master_admin.sql` | Master Admin user (ozgurhzm@hzmsoft.com) | ✅ Production | P0 |
-| 007 | `remove_plain_api_password.sql` | 🔐 Remove plain text password (SECURITY!) | 📝 Pending | P0 |
-| 008 | `add_hashed_api_secret.sql` | 🔐 Add hashed API secret + prefix + status | 📝 Pending | P0 |
-| 009 | `add_advisory_lock.sql` | 🔒 Advisory lock (prevent race conditions) | 📝 Pending | P0 |
+| 007 | `ensure_master_admin.sql` | FORCE create Master Admin (fix tracking issue) | ✅ Production | P0 |
+| 008 | `remove_plain_api_password.sql` | 🔐 Remove plain text password (SECURITY!) | 📝 Pending | P0 |
+| 009 | `add_hashed_api_secret.sql` | 🔐 Add hashed API secret + prefix + status | 📝 Pending | P0 |
+| 010 | `add_advisory_lock.sql` | 🔒 Advisory lock (prevent race conditions) | 📝 Pending | P0 |
 
 ### PHASE 2 - CORE MULTI-TENANCY ⚡ (WAITING)
 
@@ -26,9 +27,9 @@
 
 | # | Dosya | Açıklama | Durum | Priority |
 |---|-------|----------|-------|----------|
-| 010 | `schema_migrations_checksum.sql` | 📊 Add checksum, git_sha, duration tracking | ⏳ Phase 2 | P1 |
-| 011 | `environment_guards.sql` | 🛡️ Seed protection (prod vs dev) | ⏳ Phase 2 | P1 |
-| 012 | `migration_timeouts.sql` | ⏱️ Lock timeout, statement timeout | ⏳ Phase 2 | P1 |
+| 011 | `schema_migrations_checksum.sql` | 📊 Add checksum, git_sha, duration tracking | ⏳ Phase 2 | P1 |
+| 012 | `environment_guards.sql` | 🛡️ Seed protection (prod vs dev) | ⏳ Phase 2 | P1 |
+| 013 | `migration_timeouts.sql` | ⏱️ Lock timeout, statement timeout | ⏳ Phase 2 | P1 |
 
 ### PHASE 3 - GENERIC TABLE PATTERN 📊 (FUTURE)
 
@@ -36,9 +37,9 @@
 
 | # | Dosya | Açıklama | Durum | Priority |
 |---|-------|----------|-------|----------|
-| 013 | `concurrent_indexes.sql` | 🚀 CONCURRENTLY index (no downtime) | ⏳ Phase 3 | P2 |
-| 014 | `audit_log_enhancement.sql` | 📝 Full audit trail (field-level) | ⏳ Phase 3 | P2 |
-| 015 | `rls_performance_indexes.sql` | ⚡ RLS optimization indexes | ⏳ Phase 3 | P2 |
+| 014 | `concurrent_indexes.sql` | 🚀 CONCURRENTLY index (no downtime) | ⏳ Phase 3 | P2 |
+| 015 | `audit_log_enhancement.sql` | 📝 Full audit trail (field-level) | ⏳ Phase 3 | P2 |
+| 016 | `rls_performance_indexes.sql` | ⚡ RLS optimization indexes | ⏳ Phase 3 | P2 |
 
 ---
 
