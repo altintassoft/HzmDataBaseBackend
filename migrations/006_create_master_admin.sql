@@ -1,4 +1,4 @@
--- Migration: 009_create_master_admin.sql
+-- Migration: 006_create_master_admin.sql
 -- Description: Create Master Admin user for system-wide API access
 -- Author: HZM Platform
 -- Date: 2025-10-22
