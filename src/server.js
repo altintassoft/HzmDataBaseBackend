@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
 const genericDataRoutes = require('./routes/generic-data');
 const debugRoutes = require('./routes/debug');
+const adminRoutes = require('./routes/admin');
 
 // Create Express app
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/generic-data', genericDataRoutes);
 app.use('/api/v1/debug', debugRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -47,7 +49,9 @@ app.get('/', (req, res) => {
       health: '/health',
       auth: '/api/v1/auth',
       projects: '/api/v1/projects',
-      genericData: '/api/v1/generic-data'
+      genericData: '/api/v1/generic-data',
+      admin: '/api/v1/admin/database',
+      debug: '/api/v1/debug'
     }
   });
 });
