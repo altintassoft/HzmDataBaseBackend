@@ -15,11 +15,12 @@ const config = {
     poolMax: parseInt(process.env.DATABASE_POOL_MAX || '10', 10)
   },
 
-  // Redis
+  // Redis (optional)
   redis: {
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    url: process.env.REDIS_URL || null, // Don't default to localhost in production
     keyPrefix: 'hzm:',
-    ttl: parseInt(process.env.REDIS_TTL || '3600', 10)
+    ttl: parseInt(process.env.REDIS_TTL || '3600', 10),
+    enabled: process.env.REDIS_URL ? true : false
   },
 
   // JWT

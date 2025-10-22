@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 // Redis client (optional - graceful degradation)
 let redis = null;
 
-if (config.redis.url && config.redis.url !== 'redis://localhost:6379') {
+if (config.redis.url) {
   redis = new Redis(config.redis.url, {
     keyPrefix: config.redis.keyPrefix,
     retryStrategy: (times) => {
@@ -13,8 +13,11 @@ if (config.redis.url && config.redis.url !== 'redis://localhost:6379') {
       return delay;
     },
     maxRetriesPerRequest: 3,
-    lazyConnect: true
+    lazyConnect: true,
+    enableReadyCheck: true,
+    connectTimeout: 10000
   });
+  logger.info('Redis client created');
 } else {
   logger.warn('⚠️  Redis URL not configured - Running without cache');
 }
