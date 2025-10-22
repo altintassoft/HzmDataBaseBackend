@@ -25,7 +25,6 @@ router.get('/test', authenticateApiKey, (req, res) => {
       id: req.user.id,
       email: req.user.email,
       role: req.user.role,
-      full_name: req.user.full_name,
       authenticated_via: req.user.authenticated_via
     },
     timestamp: new Date().toISOString()

@@ -10,7 +10,6 @@ INSERT INTO core.users (
   password_hash,
   role,
   is_active,
-  full_name,
   created_at,
   updated_at
 )
@@ -20,7 +19,6 @@ SELECT
   '$2b$10$YcCewJ5gTNKVdZTJw.L5qOU3/Cgaanc2ha.Ulwr45DE.vzUTDhyRO',
   'master_admin',
   true,
-  'Özgür Altıntaş - Master Admin',
   NOW(),
   NOW()
 WHERE NOT EXISTS (

@@ -94,7 +94,6 @@ const authenticateApiKey = async (req, res, next) => {
         tenant_id,
         email,
         role,
-        full_name,
         api_key,
         api_password,
         is_active
@@ -138,7 +137,6 @@ const authenticateApiKey = async (req, res, next) => {
       tenant_id: user.tenant_id,
       email: user.email,
       role: user.role,
-      full_name: user.full_name,
       authenticated_via: 'api_key'
     };
 
