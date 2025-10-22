@@ -4,6 +4,7 @@ const config = require('./config');
 const logger = require('./utils/logger');
 const { initDatabase } = require('./config/database');
 const { initRedis } = require('./config/redis');
+const runMigrations = require('./scripts/migrate');
 
 // Import routes
 const healthRoutes = require('./routes/health');
@@ -64,6 +65,10 @@ const startServer = async () => {
     // Initialize database
     logger.info('Initializing database...');
     await initDatabase();
+
+    // Run migrations
+    logger.info('Running database migrations...');
+    await runMigrations();
 
     // Initialize Redis
     logger.info('Initializing Redis...');

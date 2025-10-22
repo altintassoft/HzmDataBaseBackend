@@ -26,12 +26,19 @@ async function runMigrations() {
     }
 
     logger.info('✅ All migrations completed successfully!');
-    process.exit(0);
+    return true;
   } catch (error) {
     logger.error('❌ Migration failed:', error);
-    process.exit(1);
+    throw error;
   }
 }
 
-runMigrations();
+// Only exit if run directly (not imported)
+if (require.main === module) {
+  runMigrations()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
+} else {
+  module.exports = runMigrations;
+}
 
