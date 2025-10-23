@@ -71,20 +71,44 @@ async function recordMigration(file, checksum, executedBy = 'system') {
     [file]
   );
 
-  if (existing.rows.length > 0) {
-    // Update existing record
-    await pool.query(
-      'UPDATE public.schema_migrations SET checksum = $1, executed_at = CURRENT_TIMESTAMP, executed_by = $2 WHERE migration_name = $3',
-      [checksumValue, executedBy, file]
-    );
-    logger.info(`📝 Updated tracking: ${file} (checksum: ${checksumValue?.substring(0, 8)}...)`);
-  } else {
-    // Insert new record
-    await pool.query(
-      'INSERT INTO public.schema_migrations (migration_name, checksum, executed_by) VALUES ($1, $2, $3)',
-      [file, checksumValue, executedBy]
-    );
-    logger.info(`📝 Recorded tracking: ${file} (checksum: ${checksumValue?.substring(0, 8)}...)`);
+  try {
+    if (existing.rows.length > 0) {
+      // Update existing record
+      await pool.query(
+        'UPDATE public.schema_migrations SET checksum = $1, executed_at = CURRENT_TIMESTAMP, executed_by = $2 WHERE migration_name = $3',
+        [checksumValue, executedBy, file]
+      );
+      logger.info(`📝 Updated tracking: ${file} (checksum: ${checksumValue?.substring(0, 8)}...)`);
+    } else {
+      // Insert new record
+      await pool.query(
+        'INSERT INTO public.schema_migrations (migration_name, checksum, executed_by) VALUES ($1, $2, $3)',
+        [file, checksumValue, executedBy]
+      );
+      logger.info(`📝 Recorded tracking: ${file} (checksum: ${checksumValue?.substring(0, 8)}...)`);
+    }
+  } catch (error) {
+    // Checksum/executed_by columns might not exist yet (before 007 migration)
+    if (error.code === '42703') { // column does not exist
+      logger.warn(`⚠️  Checksum/executed_by columns not found, using basic tracking`);
+      if (existing.rows.length > 0) {
+        // Update without checksum/executed_by
+        await pool.query(
+          'UPDATE public.schema_migrations SET executed_at = CURRENT_TIMESTAMP WHERE migration_name = $1',
+          [file]
+        );
+        logger.info(`📝 Updated tracking (basic): ${file}`);
+      } else {
+        // Insert without checksum/executed_by
+        await pool.query(
+          'INSERT INTO public.schema_migrations (migration_name) VALUES ($1)',
+          [file]
+        );
+        logger.info(`📝 Recorded tracking (basic): ${file}`);
+      }
+    } else {
+      throw error;
+    }
   }
 }
 
@@ -126,10 +150,31 @@ async function runMigrations() {
       }
 
       // Check if migration already executed
-      const result = await pool.query(
-        'SELECT id, checksum FROM public.schema_migrations WHERE migration_name = $1',
-        [file]
-      );
+      // Try to read checksum, but fall back to just id if column doesn't exist yet
+      let result;
+      let storedChecksum = null;
+      
+      try {
+        result = await pool.query(
+          'SELECT id, checksum FROM public.schema_migrations WHERE migration_name = $1',
+          [file]
+        );
+        
+        if (result.rows.length > 0) {
+          storedChecksum = result.rows[0].checksum;
+        }
+      } catch (error) {
+        // Checksum column might not exist yet (before 007 migration runs)
+        if (error.code === '42703') { // column does not exist
+          logger.warn(`⚠️  Checksum column not found (will be added by 007 migration)`);
+          result = await pool.query(
+            'SELECT id FROM public.schema_migrations WHERE migration_name = $1',
+            [file]
+          );
+        } else {
+          throw error;
+        }
+      }
 
       if (result.rows.length === 0) {
         // New migration - execute it
@@ -139,16 +184,23 @@ async function runMigrations() {
       }
 
       // Migration exists - check if it changed
-      const storedChecksum = result.rows[0].checksum;
       
       if (!storedChecksum) {
-        // Old migration without checksum - skip but update checksum
+        // Old migration without checksum - skip but update checksum if possible
         logger.info(`⏭️  Skipping (already executed): ${file}`);
-        await pool.query(
-          'UPDATE public.schema_migrations SET checksum = $1 WHERE migration_name = $2',
-          [currentChecksum, file]
-        );
-        logger.info(`📝 Updated checksum for: ${file}`);
+        try {
+          await pool.query(
+            'UPDATE public.schema_migrations SET checksum = $1 WHERE migration_name = $2',
+            [currentChecksum, file]
+          );
+          logger.info(`📝 Updated checksum for: ${file}`);
+        } catch (error) {
+          if (error.code === '42703') { // column does not exist
+            logger.warn(`⚠️  Checksum column not available yet, skipping checksum update`);
+          } else {
+            throw error;
+          }
+        }
         continue;
       }
 
