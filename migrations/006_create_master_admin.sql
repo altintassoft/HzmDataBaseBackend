@@ -1,4 +1,5 @@
 -- Migration: 006_create_master_admin.sql
+-- FORCE-RERUN: true
 -- Description: Create Master Admin user for system-wide API access
 -- Author: HZM Platform
 -- Date: 2025-10-22
