@@ -29,10 +29,16 @@ async function executeMigration(file, sql, reason = 'new') {
   logger.info(`Running migration: ${file} (${reason})`);
   
   // Split SQL into statements and execute each separately
-  const statements = sql
+  // Remove comments first, then split by semicolon
+  const cleanSql = sql
+    .split('\n')
+    .filter(line => !line.trim().startsWith('--'))
+    .join('\n');
+  
+  const statements = cleanSql
     .split(';')
     .map(s => s.trim())
-    .filter(s => s.length > 0 && !s.startsWith('--'));
+    .filter(s => s.length > 0);
   
   logger.info(`📝 Parsed ${statements.length} statements from ${file}`);
   
@@ -48,8 +54,9 @@ async function executeMigration(file, sql, reason = 'new') {
       // Log but continue for idempotent operations
       if (error.code === '42P07' || // relation already exists
           error.code === '42710' || // policy already exists  
-          error.code === '42P16') { // trigger already exists
-        logger.warn(`⚠️  Skipping statement (already exists)`);
+          error.code === '42P16' || // trigger already exists
+          error.code === '23505') { // duplicate key - for FORCE-RERUN scenarios
+        logger.warn(`⚠️  Skipping statement (already exists or duplicate key)`);
       } else {
         throw error;
       }
