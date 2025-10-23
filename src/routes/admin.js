@@ -1,6 +1,11 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
+const MigrationParser = require('../utils/migrationParser');
+const SchemaInspector = require('../utils/schemaInspector');
+const MigrationComparator = require('../utils/migrationComparator');
 
 const router = express.Router();
 
@@ -14,9 +19,10 @@ const router = express.Router();
 // ============================================================================
 
 // Whitelist - Sadece izin verilen type'lar
-const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users'];
-const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraints'];
+const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations'];
+const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraints', 'tracking'];
 const ALLOWED_SCHEMAS = ['core', 'app', 'cfg', 'ops'];
+const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
 router.get('/database', async (req, res) => {
   try {
@@ -71,6 +77,14 @@ router.get('/database', async (req, res) => {
 
       case 'users':
         result = await getUsersInfo(limit, offset);
+        break;
+
+      case 'migration-report':
+        result = await getMigrationReport(includes);
+        break;
+
+      case 'migrations':
+        result = await getMigrationsInfo(includes);
         break;
 
       default:
@@ -418,6 +432,146 @@ async function getUsersInfo(limit = 100, offset = 0) {
     return {
       error: 'Users table not found or query failed',
       message: error.message
+    };
+  }
+}
+
+// Get migrations info (list of migration files with tracking status)
+async function getMigrationsInfo(includes = []) {
+  try {
+    // Get migration tracking data if requested
+    let trackingData = {};
+    
+    if (includes.includes('tracking')) {
+      const trackingResult = await pool.query(`
+        SELECT migration_name, executed_at 
+        FROM public.schema_migrations 
+        ORDER BY id;
+      `);
+      
+      for (const row of trackingResult.rows) {
+        trackingData[row.migration_name] = {
+          executed: true,
+          executed_at: row.executed_at
+        };
+      }
+    }
+
+    // Read migration files
+    const files = fs.readdirSync(MIGRATIONS_DIR)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    const migrations = [];
+
+    for (const file of files) {
+      const filePath = path.join(MIGRATIONS_DIR, file);
+      const parsed = MigrationParser.parseMigrationFile(filePath);
+      
+      if (parsed) {
+        const tracking = trackingData[file] || { executed: false, executed_at: null };
+        
+        migrations.push({
+          filename: parsed.filename,
+          description: parsed.description,
+          author: parsed.author,
+          date: parsed.date,
+          executed: tracking.executed,
+          executed_at: tracking.executed_at,
+          summary: MigrationParser.getMigrationSummary(parsed)
+        });
+      }
+    }
+
+    return {
+      total: migrations.length,
+      migrations
+    };
+  } catch (error) {
+    logger.error('Failed to get migrations info:', error);
+    return {
+      error: 'Failed to read migrations',
+      message: error.message
+    };
+  }
+}
+
+// Get migration report (detailed comparison between migrations and actual database)
+async function getMigrationReport(includes = []) {
+  try {
+    logger.info('Generating migration report...');
+
+    // 1. Read and parse all migration files
+    const files = fs.readdirSync(MIGRATIONS_DIR)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    const parsedMigrations = [];
+    for (const file of files) {
+      const filePath = path.join(MIGRATIONS_DIR, file);
+      const parsed = MigrationParser.parseMigrationFile(filePath);
+      if (parsed) {
+        parsedMigrations.push(parsed);
+      }
+    }
+
+    logger.info(`Parsed ${parsedMigrations.length} migration files`);
+
+    // 2. Get actual database schema
+    const actualSchema = await SchemaInspector.getCompleteSchema();
+    logger.info(`Inspected ${Object.keys(actualSchema).length} tables from database`);
+
+    // 3. Get migration tracking data
+    const trackingResult = await pool.query(`
+      SELECT migration_name, executed_at 
+      FROM public.schema_migrations 
+      ORDER BY id;
+    `);
+    
+    const trackingMap = {};
+    for (const row of trackingResult.rows) {
+      trackingMap[row.migration_name] = {
+        executed: true,
+        executed_at: row.executed_at
+      };
+    }
+
+    // 4. Get actual data for comparison (if requested)
+    let actualData = {};
+    if (includes.includes('data')) {
+      // Fetch sample data from core.users for INSERT comparison
+      const usersResult = await pool.query('SELECT id, email, role FROM core.users;');
+      actualData['core.users'] = usersResult.rows;
+    }
+
+    // 5. Generate comparison report
+    const comparisonReport = MigrationComparator.generateReport(
+      parsedMigrations,
+      actualSchema,
+      actualData
+    );
+
+    // 6. Enhance report with tracking information
+    for (const migrationReport of comparisonReport.migrations) {
+      const tracking = trackingMap[migrationReport.filename] || { executed: false, executed_at: null };
+      migrationReport.executed = tracking.executed;
+      migrationReport.executed_at = tracking.executed_at;
+    }
+
+    logger.info('Migration report generated successfully');
+
+    return {
+      summary: comparisonReport.summary,
+      migrations: comparisonReport.migrations,
+      tables: comparisonReport.tables,
+      totalTables: Object.keys(comparisonReport.tables).length
+    };
+  } catch (error) {
+    logger.error('Failed to generate migration report:', error);
+    return {
+      error: 'Failed to generate migration report',
+      message: error.message,
+      stack: error.stack
     };
   }
 }
