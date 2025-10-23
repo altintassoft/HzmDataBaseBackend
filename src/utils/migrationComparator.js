@@ -264,7 +264,7 @@ class MigrationComparator {
       // Check columns added by this migration
       for (const column of parsed.columns) {
         const tableComparison = report.tables[column.fullName];
-        if (tableComparison) {
+        if (tableComparison && tableComparison.columnComparison && tableComparison.columnComparison.matching) {
           const columnFound = tableComparison.columnComparison.matching.some(
             c => c.name.toLowerCase() === column.column.toLowerCase()
           );
