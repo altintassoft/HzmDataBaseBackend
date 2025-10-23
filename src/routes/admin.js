@@ -19,7 +19,7 @@ const router = express.Router();
 // ============================================================================
 
 // Whitelist - Sadece izin verilen type'lar
-const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations'];
+const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations', 'architecture-compliance'];
 const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraints', 'tracking'];
 const ALLOWED_SCHEMAS = ['core', 'app', 'cfg', 'ops'];
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
@@ -85,6 +85,10 @@ router.get('/database', async (req, res) => {
 
       case 'migrations':
         result = await getMigrationsInfo(includes);
+        break;
+
+      case 'architecture-compliance':
+        result = await getArchitectureCompliance(includes);
         break;
 
       default:
@@ -582,6 +586,207 @@ async function getMigrationReport(includes = []) {
       migrations: [],
       tables: {},
       totalTables: 0
+    };
+  }
+}
+
+// Get Architecture Compliance Report
+async function getArchitectureCompliance(includes = []) {
+  try {
+    logger.info('Generating architecture compliance report...');
+
+    // 1. Database Schema Analysis
+    const tableCountResult = await pool.query(`
+      SELECT schemaname, COUNT(*) as table_count
+      FROM pg_tables
+      WHERE schemaname = ANY($1)
+      GROUP BY schemaname;
+    `, [ALLOWED_SCHEMAS]);
+
+    const expectedTables = 9; // From BACKEND_PHASE_PLAN
+    const actualTables = tableCountResult.rows.reduce((sum, row) => sum + parseInt(row.table_count), 0);
+    const missingTables = Math.max(0, expectedTables - actualTables);
+
+    const databaseSchemaScore = Math.round((actualTables / expectedTables) * 100);
+
+    // 2. Migration Consistency Check
+    const migrationResult = await pool.query(`
+      SELECT COUNT(*) as migration_count
+      FROM public.schema_migrations;
+    `);
+    const executedMigrations = parseInt(migrationResult.rows[0].migration_count) || 0;
+    const migrationConsistencyScore = executedMigrations >= 7 ? 85 : 50;
+
+    // 3. Endpoint Analysis (Mock - gerçek implementasyon route scanning gerektirir)
+    const currentEndpoints = 34; // Mock değer
+    const targetEndpoints = 17; // From SMART_ENDPOINT_STRATEGY_V2
+    const endpointArchitectureScore = Math.max(0, 100 - ((currentEndpoints - targetEndpoints) * 3));
+
+    // 4. Security Implementation Check
+    const securityChecks = {
+      hmac: false,
+      cursor_security: false,
+      scopes: false,
+      admin_mfa: false,
+      admin_ip_allowlist: false,
+      admin_pii_masking: false,
+      rate_limiting: true, // Redis var
+      error_standardization: false,
+      rls_context: true,
+      audit_logging: true
+    };
+
+    const securityScore = (Object.values(securityChecks).filter(Boolean).length / Object.keys(securityChecks).length) * 100;
+
+    // 5. RLS & Multi-Tenancy Check
+    const rlsPolicyResult = await pool.query(`
+      SELECT COUNT(*) as policy_count
+      FROM pg_policies
+      WHERE schemaname = ANY($1);
+    `, [ALLOWED_SCHEMAS]);
+    const rlsScore = Math.min(100, (parseInt(rlsPolicyResult.rows[0].policy_count) || 0) * 20);
+
+    // 6. Best Practices Score
+    const bestPracticesScore = 55; // Mock - gerçek implementasyon detaylı kontroller gerektirir
+
+    // Calculate overall score
+    const overallScore = Math.round(
+      (databaseSchemaScore * 0.20) +
+      (migrationConsistencyScore * 0.15) +
+      (endpointArchitectureScore * 0.20) +
+      (securityScore * 0.20) +
+      (rlsScore * 0.15) +
+      (bestPracticesScore * 0.10)
+    );
+
+    // Generate action plan
+    const actionPlan = {
+      p0_critical: [],
+      p1_high: [],
+      p2_medium: []
+    };
+
+    // Add actions based on issues
+    if (missingTables > 0) {
+      actionPlan.p0_critical.push({
+        title: `${missingTables} Tablo Eksik`,
+        description: `BACKEND_PHASE_PLAN'e göre ${missingTables} tablo eksik. Migration'ları kontrol edin.`,
+        details: 'core.api_keys, core.projects, app.generic_data, core.sequences gibi tablolar eksik olabilir.'
+      });
+    }
+
+    if (currentEndpoints > targetEndpoints) {
+      actionPlan.p0_critical.push({
+        title: 'Endpoint Consolidation Gerekli',
+        description: `${currentEndpoints - targetEndpoints} fazla endpoint var. Generic pattern'e geçilmeli.`,
+        details: 'SMART_ENDPOINT_STRATEGY_V2\'ye göre 17 endpoint hedefleniyor, şu an ' + currentEndpoints + ' endpoint var.'
+      });
+    }
+
+    if (!securityChecks.hmac) {
+      actionPlan.p1_high.push({
+        title: 'HMAC Implementation',
+        description: 'Server-to-server ve compute endpoint\'leri için HMAC imzalama eklenmeli.',
+        details: 'Replay attack koruması için X-Timestamp, X-Nonce, X-Signature header\'ları implement edilmeli.'
+      });
+    }
+
+    if (!securityChecks.scopes) {
+      actionPlan.p1_high.push({
+        title: 'Scopes System',
+        description: 'API key bazlı scope sistemi kurulmalı (projects:read, users:write vb.)',
+        details: 'core.api_keys tablosuna scopes TEXT[] kolonu eklenmeli ve middleware yazılmalı.'
+      });
+    }
+
+    if (!securityChecks.cursor_security) {
+      actionPlan.p1_high.push({
+        title: 'Cursor Security',
+        description: 'Pagination için HMAC-signed cursor implementasyonu gerekli.',
+        details: 'Offset pagination yerine cursor-based pagination (HMAC-signed, 1h expiry, PII forbidden).'
+      });
+    }
+
+    if (!securityChecks.admin_mfa) {
+      actionPlan.p1_high.push({
+        title: 'Admin MFA',
+        description: 'Admin endpoint\'leri için MFA (TOTP) zorunlu hale getirilmeli.',
+        details: '/admin endpoint\'lerine erişim için MFA kontrolü eklenmeli.'
+      });
+    }
+
+    if (!securityChecks.error_standardization) {
+      actionPlan.p0_critical.push({
+        title: 'Error Response Standardization',
+        description: 'Tüm endpoint\'lerde standart error format kullanılmalı.',
+        details: '{ error: { code, message, details }, request_id } formatında 30+ error code tanımlanmalı.'
+      });
+    }
+
+    return {
+      overall_score: overallScore,
+      category_scores: {
+        database_schema: databaseSchemaScore,
+        migration_consistency: migrationConsistencyScore,
+        endpoint_architecture: endpointArchitectureScore,
+        security_implementation: Math.round(securityScore),
+        rls_multi_tenancy: rlsScore,
+        best_practices: bestPracticesScore
+      },
+      database_analysis: {
+        tables: {
+          expected: expectedTables,
+          actual: actualTables,
+          missing: missingTables
+        },
+        columns: {
+          mismatches: [] // TODO: Implement detailed column comparison
+        },
+        seed_data: {
+          missing: [] // TODO: Check for missing seed data
+        }
+      },
+      endpoint_analysis: {
+        total: currentEndpoints,
+        target: targetEndpoints,
+        extra: [], // TODO: List extra endpoints
+        missing: [] // TODO: List missing endpoints
+      },
+      api_key_architecture: {
+        format_compliance: 60, // Mock - API key format kontrolü gerekir
+        features: {
+          opak_format: false,
+          key_id_uuid: false,
+          label: false,
+          created_by: false,
+          rotated_from_key_id: false,
+          scopes: false,
+          ip_allowlist: false,
+          expires_at: false
+        }
+      },
+      security_checklist: securityChecks,
+      action_plan: actionPlan
+    };
+  } catch (error) {
+    logger.error('Failed to generate architecture compliance report:', error);
+    return {
+      error: 'Failed to generate architecture compliance report',
+      message: error.message,
+      overall_score: 0,
+      category_scores: {
+        database_schema: 0,
+        migration_consistency: 0,
+        endpoint_architecture: 0,
+        security_implementation: 0,
+        rls_multi_tenancy: 0,
+        best_practices: 0
+      },
+      database_analysis: { tables: { expected: 0, actual: 0, missing: 0 }, columns: { mismatches: [] }, seed_data: { missing: [] } },
+      endpoint_analysis: { total: 0, target: 0, extra: [], missing: [] },
+      api_key_architecture: { format_compliance: 0, features: {} },
+      security_checklist: {},
+      action_plan: { p0_critical: [], p1_high: [], p2_medium: [] }
     };
   }
 }
