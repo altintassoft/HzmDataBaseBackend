@@ -571,7 +571,17 @@ async function getMigrationReport(includes = []) {
     return {
       error: 'Failed to generate migration report',
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
+      // Provide default summary to prevent frontend crashes
+      summary: {
+        totalMigrations: 0,
+        successCount: 0,
+        warningCount: 0,
+        errorCount: 0
+      },
+      migrations: [],
+      tables: {},
+      totalTables: 0
     };
   }
 }
