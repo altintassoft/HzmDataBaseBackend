@@ -166,10 +166,20 @@ class MigrationComparator {
     // Simple matching: check if any row has matching email or id
     // (This is a simplified version; real implementation would be more sophisticated)
     
-    const emailIndex = columns.findIndex(col => col.toLowerCase() === 'email');
-    if (emailIndex !== -1) {
-      const expectedEmail = values[emailIndex].replace(/'/g, '');
-      return tableData.some(row => row.email === expectedEmail);
+    const emailIndex = columns.findIndex(col => col.trim().toLowerCase() === 'email');
+    if (emailIndex !== -1 && values[emailIndex]) {
+      // Clean the email value: remove quotes, whitespace, and newlines
+      const expectedEmail = values[emailIndex]
+        .replace(/'/g, '')
+        .replace(/"/g, '')
+        .replace(/\s+/g, '')
+        .toLowerCase()
+        .trim();
+      
+      return tableData.some(row => {
+        const actualEmail = (row.email || '').toLowerCase().trim();
+        return actualEmail === expectedEmail;
+      });
     }
 
     return false;

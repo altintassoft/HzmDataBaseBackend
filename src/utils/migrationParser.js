@@ -225,8 +225,9 @@ class MigrationParser {
   static extractInserts(content) {
     const inserts = [];
     
-    // Match INSERT INTO statements
-    const regex = /INSERT\s+INTO\s+([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\s*\((.*?)\)\s*VALUES\s*\((.*?)\)/gi;
+    // Match INSERT INTO statements (including multi-line)
+    // Use [\s\S] instead of . to match newlines
+    const regex = /INSERT\s+INTO\s+([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)/gi;
     let match;
 
     while ((match = regex.exec(content)) !== null) {
