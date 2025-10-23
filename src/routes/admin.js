@@ -27,6 +27,7 @@ const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 router.get('/database', async (req, res) => {
   try {
     const { type, include, schema, table, limit, offset } = req.query;
+    const user = req.user || { role: 'user', tenant_id: 1 }; // Get from JWT token (req.user set by auth middleware)
 
     // 🐛 DEBUG: Log incoming request
     logger.info('Admin database request:', {
@@ -52,6 +53,19 @@ router.get('/database', async (req, res) => {
 
     let result;
 
+    // 🔒 ROLE-BASED AUTHORIZATION: Migration ve Architecture raporları sadece admin ve master_admin için
+    const restrictedReports = ['migration-report', 'migrations', 'architecture-compliance'];
+    if (restrictedReports.includes(type)) {
+      if (!user.role || !['admin', 'master_admin'].includes(user.role)) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Bu rapor için yetkiniz yok. Sadece Admin ve Master Admin erişebilir.',
+          requiredRole: ['admin', 'master_admin'],
+          yourRole: user.role || 'user'
+        });
+      }
+    }
+
     switch (type) {
       case 'tables':
         result = await getTablesInfo(includes);
@@ -64,7 +78,7 @@ router.get('/database', async (req, res) => {
         if (!ALLOWED_SCHEMAS.includes(schema)) {
           return res.status(403).json({ error: 'Schema not allowed', allowed: ALLOWED_SCHEMAS });
         }
-        result = await getSingleTableInfo(schema, table, includes, limit, offset);
+        result = await getSingleTableInfo(schema, table, includes, limit, offset, user);
         break;
 
       case 'schemas':
@@ -279,7 +293,7 @@ async function getTablesInfo(includes = []) {
 }
 
 // Get single table info with optional data
-async function getSingleTableInfo(schema, table, includes = [], limit = 100, offset = 0) {
+async function getSingleTableInfo(schema, table, includes = [], limit = 100, offset = 0, user = null) {
   const tableInfo = {
     schema,
     table,
@@ -304,18 +318,34 @@ async function getSingleTableInfo(schema, table, includes = [], limit = 100, off
 
   // Include actual data
   if (includes.includes('data')) {
-    const countResult = await pool.query(
-      `SELECT COUNT(*) as total FROM ${schema}.${table};`
-    );
-    const dataResult = await pool.query(
-      `SELECT * FROM ${schema}.${table} ORDER BY id LIMIT $1 OFFSET $2;`,
-      [limit || 100, offset || 0]
-    );
+    // 🔒 TENANT ISOLATION: Master admin dışındakiler sadece kendi tenant'ını görsün
+    let whereClause = '';
+    let queryParams = [];
+    
+    if (user && user.role !== 'master_admin') {
+      // Check if table has tenant_id column
+      const hasTenantId = columnsResult.rows.some(col => col.column_name === 'tenant_id');
+      
+      if (hasTenantId) {
+        whereClause = 'WHERE tenant_id = $1';
+        queryParams.push(user.tenant_id);
+      }
+    }
+    
+    // Build query with tenant isolation
+    const countQuery = `SELECT COUNT(*) as total FROM ${schema}.${table} ${whereClause};`;
+    const dataQuery = `SELECT * FROM ${schema}.${table} ${whereClause} ORDER BY id LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2};`;
+    
+    queryParams.push(limit || 100, offset || 0);
+    
+    const countResult = await pool.query(countQuery, queryParams.length > 2 ? [queryParams[0]] : []);
+    const dataResult = await pool.query(dataQuery, queryParams);
     
     tableInfo.data = dataResult.rows;
     tableInfo.total = parseInt(countResult.rows[0].total);
     tableInfo.limit = parseInt(limit) || 100;
     tableInfo.offset = parseInt(offset) || 0;
+    tableInfo.isolated = whereClause !== ''; // Show if data is tenant-isolated
   }
 
   // Include indexes
