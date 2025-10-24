@@ -20,7 +20,7 @@ const router = express.Router();
 // ============================================================================
 
 // Whitelist - Sadece izin verilen type'lar
-const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations', 'architecture-compliance', 'table-comparison', 'all-tables-raw', 'endpoint-compliance'];
+const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations', 'architecture-compliance', 'table-comparison', 'all-tables-raw', 'endpoint-compliance', 'plan-compliance'];
 const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraints', 'tracking'];
 const ALLOWED_SCHEMAS = ['core', 'app', 'cfg', 'ops'];
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
@@ -112,6 +112,10 @@ router.get('/database', authenticateJwtOrApiKey, async (req, res) => {
 
       case 'endpoint-compliance':
         result = await getEndpointCompliance();
+        break;
+
+      case 'plan-compliance':
+        result = await getPlanCompliance();
         break;
       
       case 'all-tables-raw':
@@ -1426,6 +1430,206 @@ async function getEndpointCompliance() {
       endpoints: [],
       stats: { total: 0, compliant: 0, partial: 0, missing: 0, noncompliant: 0 },
       successRate: 0
+    };
+  }
+}
+
+/**
+ * Get Plan Compliance Report
+ * Compare SMART_ENDPOINT_STRATEGY_V2.md (expected) vs actual backend routes
+ */
+async function getPlanCompliance() {
+  try {
+    logger.info('📊 Generating Plan Compliance Report...');
+    
+    // 1. Parse SMART_ENDPOINT_STRATEGY_V2.md to extract expected endpoints
+    const strategyFilePath = path.join(__dirname, '../../../HzmVeriTabaniYolHaritasi/SMART_ENDPOINT_STRATEGY_V2.md');
+    
+    if (!fs.existsSync(strategyFilePath)) {
+      throw new Error('SMART_ENDPOINT_STRATEGY_V2.md not found');
+    }
+    
+    const strategyContent = fs.readFileSync(strategyFilePath, 'utf8');
+    
+    // Define expected endpoints from the strategy document
+    const expectedEndpoints = {
+      authentication: [
+        { method: 'POST', path: '/api/v1/auth/register', description: 'User registration' },
+        { method: 'POST', path: '/api/v1/auth/login', description: 'User login' },
+        { method: 'POST', path: '/api/v1/auth/refresh', description: 'Refresh token' }
+      ],
+      generic_data: [
+        { method: 'GET', path: '/api/v1/data/:resource', description: 'List resources' },
+        { method: 'POST', path: '/api/v1/data/:resource', description: 'Create resource' },
+        { method: 'GET', path: '/api/v1/data/:resource/:id', description: 'Get resource by ID' },
+        { method: 'PUT', path: '/api/v1/data/:resource/:id', description: 'Update resource' },
+        { method: 'PATCH', path: '/api/v1/data/:resource/:id', description: 'Partial update' },
+        { method: 'DELETE', path: '/api/v1/data/:resource/:id', description: 'Delete resource' }
+      ],
+      admin: [
+        { method: 'GET', path: '/api/v1/admin', description: 'Admin operations (query param: type)' }
+      ],
+      settings: [
+        { method: 'GET', path: '/api/v1/settings', description: 'Get settings (query param: type)' },
+        { method: 'PUT', path: '/api/v1/settings', description: 'Update settings (query param: type)' },
+        { method: 'POST', path: '/api/v1/settings/action', description: 'Settings actions' }
+      ],
+      compute: [
+        { method: 'POST', path: '/api/v1/compute/formula', description: 'Evaluate formula' },
+        { method: 'POST', path: '/api/v1/compute/batch', description: 'Batch compute' }
+      ],
+      health: [
+        { method: 'GET', path: '/api/v1/health', description: 'Health check' },
+        { method: 'GET', path: '/api/v1/health/ready', description: 'Readiness check' }
+      ]
+    };
+    
+    // 2. Scan actual backend routes
+    const routesDir = path.join(__dirname);
+    const routeFiles = fs.readdirSync(routesDir).filter(file => file.endsWith('.js') && file !== 'admin.js');
+    
+    const actualEndpoints = [];
+    
+    for (const file of routeFiles) {
+      const filePath = path.join(routesDir, file);
+      const content = fs.readFileSync(filePath, 'utf8');
+      
+      // Extract router.METHOD patterns
+      const routerRegex = /router\.(get|post|put|delete|patch)\(['"]([^'"]+)['"]/g;
+      let match;
+      
+      // Determine prefix from filename
+      let prefix = '';
+      if (file === 'auth.js') prefix = '/auth';
+      else if (file === 'api-keys.js') prefix = '/api-keys';
+      else if (file === 'protected.js') prefix = '/protected';
+      else if (file === 'health.js') prefix = '/health';
+      else if (file === 'settings.js') prefix = '/settings';
+      else if (file === 'compute.js') prefix = '/compute';
+      else if (file === 'data.js' || file === 'generic-data.js') prefix = '/data';
+      
+      while ((match = routerRegex.exec(content)) !== null) {
+        const method = match[1].toUpperCase();
+        const routePath = match[2];
+        const fullPath = `/api/v1${prefix}${routePath}`;
+        
+        actualEndpoints.push({
+          method,
+          path: fullPath,
+          file: file.replace('.js', '')
+        });
+      }
+    }
+    
+    // 3. Compare expected vs actual by category
+    const comparison = {};
+    let totalExpected = 0;
+    let totalActual = actualEndpoints.length;
+    let totalMatched = 0;
+    let totalMissing = 0;
+    
+    for (const [category, expectedList] of Object.entries(expectedEndpoints)) {
+      totalExpected += expectedList.length;
+      
+      const categoryComparison = {
+        expected: expectedList,
+        actual: [],
+        matched: [],
+        missing: [],
+        status: 'unknown'
+      };
+      
+      // Find matches
+      for (const expected of expectedList) {
+        const match = actualEndpoints.find(actual => 
+          actual.method === expected.method && 
+          (actual.path === expected.path || 
+           // Handle generic patterns like :resource, :id
+           (expected.path.includes(':') && 
+            actual.path.replace(/\/[^/]+$/, '/:param').replace(/\/[^/]+\//, '/:resource/') === expected.path.replace(/\/[^/]+$/, '/:param').replace(/\/[^/]+\//, '/:resource/')
+           )
+          )
+        );
+        
+        if (match) {
+          categoryComparison.matched.push({
+            method: expected.method,
+            path: expected.path,
+            description: expected.description,
+            actualPath: match.path,
+            file: match.file
+          });
+          totalMatched++;
+        } else {
+          categoryComparison.missing.push({
+            method: expected.method,
+            path: expected.path,
+            description: expected.description
+          });
+          totalMissing++;
+        }
+      }
+      
+      // Determine status
+      if (categoryComparison.matched.length === expectedList.length) {
+        categoryComparison.status = 'complete';
+      } else if (categoryComparison.matched.length > 0) {
+        categoryComparison.status = 'partial';
+      } else {
+        categoryComparison.status = 'missing';
+      }
+      
+      comparison[category] = categoryComparison;
+    }
+    
+    // 4. Find extra endpoints (not in plan)
+    const allExpectedPaths = Object.values(expectedEndpoints).flat().map(e => e.path);
+    const extraEndpoints = actualEndpoints.filter(actual => {
+      // Normalize actual path for comparison
+      const normalizedActual = actual.path
+        .replace(/\/\d+$/, '/:id')
+        .replace(/\/[a-z-]+\//, '/:resource/');
+      
+      return !allExpectedPaths.some(expected => {
+        const normalizedExpected = expected
+          .replace(/\/\d+$/, '/:id')
+          .replace(/\/[a-z-]+\//, '/:resource/');
+        
+        return normalizedExpected === normalizedActual || expected === actual.path;
+      });
+    });
+    
+    // 5. Calculate summary stats
+    const successRate = totalExpected > 0 ? Math.round((totalMatched / totalExpected) * 100) : 0;
+    
+    return {
+      summary: {
+        totalExpected,
+        totalActual,
+        totalMatched,
+        totalMissing,
+        extraCount: extraEndpoints.length,
+        successRate
+      },
+      categories: comparison,
+      extraEndpoints,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error('Failed to generate plan compliance report:', error);
+    return {
+      error: 'Failed to generate plan compliance report',
+      message: error.message,
+      summary: {
+        totalExpected: 0,
+        totalActual: 0,
+        totalMatched: 0,
+        totalMissing: 0,
+        extraCount: 0,
+        successRate: 0
+      },
+      categories: {},
+      extraEndpoints: []
     };
   }
 }
