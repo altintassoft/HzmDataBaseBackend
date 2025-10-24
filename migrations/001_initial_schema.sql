@@ -3,8 +3,14 @@
 -- Description: Core tables for multi-tenant DBaaS platform
 -- FORCE-RERUN: true
 
--- Note: schema_migrations table is created by migrate.js
+-- Migration Tracking Table
+-- This table is created BOTH by migrate.js (for bootstrapping) AND here (for visibility in reports)
 -- Additional columns (checksum, executed_by) are added by 007_add_migration_checksum.sql
+CREATE TABLE IF NOT EXISTS public.schema_migrations (
+  id SERIAL PRIMARY KEY,
+  migration_name VARCHAR(255) UNIQUE NOT NULL,
+  executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
