@@ -24,6 +24,7 @@ class MigrationParser {
       // Parse SQL content
       const tables = this.extractTables(content);
       const columns = this.extractColumns(content);
+      const alterColumns = this.extractAlterColumns(content);
       const indexes = this.extractIndexes(content);
       const foreignKeys = this.extractForeignKeys(content);
       const inserts = this.extractInserts(content);
@@ -35,6 +36,7 @@ class MigrationParser {
         date,
         tables,
         columns,
+        alterColumns,
         indexes,
         foreignKeys,
         inserts
@@ -154,6 +156,35 @@ class MigrationParser {
     }
 
     return columns;
+  }
+
+  /**
+   * Extract ALTER TABLE ALTER COLUMN TYPE statements
+   */
+  static extractAlterColumns(content) {
+    const alterColumns = [];
+    
+    // Match ALTER TABLE ALTER COLUMN TYPE statements
+    const regex = /ALTER\s+TABLE\s+([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\s+ALTER\s+COLUMN\s+([a-zA-Z0-9_]+)\s+TYPE\s+([A-Z0-9()]+(?:\[\])?)/gi;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      const fullName = match[1];
+      const [schema, table] = fullName.split('.');
+      const columnName = match[2];
+      const newType = match[3];
+
+      alterColumns.push({
+        schema,
+        table,
+        fullName,
+        column: columnName,
+        newType: newType.toUpperCase(),
+        action: 'ALTER_TYPE'
+      });
+    }
+
+    return alterColumns;
   }
 
   /**
@@ -299,6 +330,7 @@ class MigrationParser {
       description: parsed.description,
       tablesCreated: parsed.tables.length,
       columnsAdded: parsed.columns.length,
+      columnsAltered: parsed.alterColumns?.length || 0,
       indexesCreated: parsed.indexes.length,
       foreignKeysAdded: parsed.foreignKeys.length,
       rowsInserted: parsed.inserts.length

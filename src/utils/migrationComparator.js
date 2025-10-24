@@ -304,7 +304,7 @@ class MigrationComparator {
   static buildExpectedSchema(parsedMigrations) {
     const schema = {};
 
-    // Process migrations in order
+    // Process migrations in order (chronological)
     for (const parsed of parsedMigrations) {
       // Add tables from CREATE TABLE
       for (const table of parsed.tables) {
@@ -338,6 +338,22 @@ class MigrationComparator {
           });
         }
       }
+
+      // Apply ALTER TABLE ALTER COLUMN TYPE changes
+      if (parsed.alterColumns) {
+        for (const alterColumn of parsed.alterColumns) {
+          if (schema[alterColumn.fullName]) {
+            const columnIndex = schema[alterColumn.fullName].columns.findIndex(
+              c => c.name.toLowerCase() === alterColumn.column.toLowerCase()
+            );
+
+            if (columnIndex !== -1) {
+              // Update the column type
+              schema[alterColumn.fullName].columns[columnIndex].type = alterColumn.newType;
+            }
+          }
+        }
+      }
     }
 
     return schema;
@@ -353,20 +369,42 @@ class MigrationComparator {
     // Remove whitespace and convert to uppercase
     let normalized = type.trim().toUpperCase();
 
-    // Normalize common type variations
+    // 1. PostgreSQL auto-converts types (MUST accept as equivalent)
     const typeMap = {
-      'INT': 'INTEGER',
-      'INT4': 'INTEGER',
-      'INT8': 'BIGINT',
-      'BOOL': 'BOOLEAN',
-      'SERIAL': 'INTEGER',
-      'BIGSERIAL': 'BIGINT'
+      'SERIAL': 'INTEGER',           // SERIAL → INTEGER (PostgreSQL auto-conversion)
+      'BIGSERIAL': 'BIGINT',          // BIGSERIAL → BIGINT
+      'INT': 'INTEGER',               // INT → INTEGER
+      'INT4': 'INTEGER',              // INT4 → INTEGER
+      'INT8': 'BIGINT',               // INT8 → BIGINT
+      'BOOL': 'BOOLEAN',              // BOOL → BOOLEAN
+      'TIMESTAMPTZ': 'TIMESTAMP WITH TIME ZONE',
+      'CHARACTER VARYING': 'VARCHAR', // PostgreSQL's verbose form
+      'CHARACTER': 'CHAR'
     };
 
     for (const [from, to] of Object.entries(typeMap)) {
       if (normalized.startsWith(from)) {
         normalized = normalized.replace(from, to);
+        break;
       }
+    }
+
+    // 2. Normalize VARCHAR/CHAR lengths
+    // VARCHAR(100) and VARCHAR(100) → both become VARCHAR(100)
+    // But also: "character varying(100)" → "VARCHAR(100)"
+    const varcharMatch = normalized.match(/VARCHAR\((\d+)\)/);
+    if (varcharMatch) {
+      return `VARCHAR(${varcharMatch[1]})`;
+    }
+
+    const charMatch = normalized.match(/CHAR\((\d+)\)/);
+    if (charMatch) {
+      return `CHAR(${charMatch[1]})`;
+    }
+
+    // 3. Text types (no length)
+    if (normalized === 'TEXT' || normalized === 'VARCHAR' || normalized === 'CHAR') {
+      return normalized;
     }
 
     return normalized;
