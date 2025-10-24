@@ -905,13 +905,14 @@ async function getArchitectureCompliance(includes = []) {
       const content = fs.readFileSync(filePath, 'utf8');
       
       // Find all router definitions
-      const routerRegex = /router\.(get|post|put|delete|patch)\(['"]([^'"]+)['"](?:,\s*(\w+))?,/g;
+      // Matches: router.METHOD('endpoint', [middleware], [async] (req, res) => {
+      const routerRegex = /router\.(get|post|put|delete|patch)\(['"]([^'"]+)['"],\s*(authenticate\w+)?/g;
       let match;
       
       while ((match = routerRegex.exec(content)) !== null) {
         const method = match[1].toUpperCase();
         const endpoint = match[2];
-        const middleware = match[3] || null;
+        const middleware = match[3] || null; // Will be 'authenticateJWT' or 'authenticateApiKey' or null
         
         let currentAuth = 'none';
         let expectedAuth = 'api_key'; // Default expectation
