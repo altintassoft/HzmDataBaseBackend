@@ -134,6 +134,68 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Refresh token
+router.post('/refresh', async (req, res) => {
+  try {
+    const { token: oldToken } = req.body;
+
+    if (!oldToken) {
+      return res.status(400).json({ error: 'Token required' });
+    }
+
+    // Verify old token (allow expired tokens for refresh)
+    let decoded;
+    try {
+      decoded = jwt.verify(oldToken, config.jwt.secret);
+    } catch (error) {
+      // If token is expired, try to decode without verification to get payload
+      if (error.name === 'TokenExpiredError') {
+        decoded = jwt.decode(oldToken);
+      } else {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+    }
+
+    // Get user to ensure they still exist and are active
+    const result = await pool.query(
+      `SELECT id, tenant_id, email, role, is_active
+       FROM core.users
+       WHERE id = $1 AND is_deleted = false`,
+      [decoded.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    if (!user.is_active) {
+      return res.status(403).json({ error: 'User account is disabled' });
+    }
+
+    // Generate new JWT
+    const newToken = jwt.sign(
+      {
+        userId: user.id,
+        tenantId: user.tenant_id,
+        email: user.email,
+        role: user.role
+      },
+      config.jwt.secret,
+      { expiresIn: config.jwt.expiresIn }
+    );
+
+    res.json({
+      message: 'Token refreshed successfully',
+      token: newToken
+    });
+  } catch (error) {
+    logger.error('Refresh token error:', error);
+    res.status(500).json({ error: 'Token refresh failed' });
+  }
+});
+
 // Get current user
 router.get('/me', async (req, res) => {
   try {
