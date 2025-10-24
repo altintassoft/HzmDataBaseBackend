@@ -1449,13 +1449,13 @@ async function getPlanCompliance() {
     
     if (fs.existsSync(strategyFilePath)) {
       try {
+        logger.info(`📁 File exists at: ${strategyFilePath}`);
         const strategyContent = fs.readFileSync(strategyFilePath, 'utf8');
-        logger.info('✅ Reading SMART_ENDPOINT_STRATEGY_V2.md...');
+        logger.info(`✅ File read successfully, size: ${strategyContent.length} bytes`);
         
         // Parse markdown to extract endpoints
-        // Pattern: #### METHOD /path
-        const endpointRegex = /####\s+(GET|POST|PUT|PATCH|DELETE)\s+(\/[^\s\n]+)/g;
         const lines = strategyContent.split('\n');
+        logger.info(`📄 Total lines: ${lines.length}`);
         
         let currentCategory = null;
         const categoryMap = {
@@ -1466,6 +1466,9 @@ async function getPlanCompliance() {
           'admin': ['Admin Operations', 'Admin'],
           'health': ['Health & Monitoring', 'Health']
         };
+        
+        let categoryCount = 0;
+        let endpointCount = 0;
         
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
@@ -1480,8 +1483,14 @@ async function getPlanCompliance() {
             for (const [key, patterns] of Object.entries(categoryMap)) {
               if (patterns.some(pattern => categoryName.startsWith(pattern))) {
                 currentCategory = key;
+                categoryCount++;
+                logger.info(`🔹 Category found at line ${i}: '${categoryName}' → '${key}'`);
                 break;
               }
+            }
+            
+            if (!currentCategory) {
+              logger.warn(`⚠️  Unmatched category at line ${i}: '${categoryName}'`);
             }
             
             if (currentCategory && !expectedEndpoints[currentCategory]) {
@@ -1498,6 +1507,11 @@ async function getPlanCompliance() {
             // Add /api/v1 prefix if not present (except for /health)
             if (!path.startsWith('/api/v1') && !path.startsWith('/health')) {
               path = '/api/v1' + path;
+            }
+            
+            endpointCount++;
+            if (endpointCount <= 5) {
+              logger.info(`  🎯 Endpoint ${endpointCount}: ${method} ${path} (category: ${currentCategory})`);
             }
             
             // Look for description in the next few lines (after "- **Auth**:" line)
@@ -1532,11 +1546,20 @@ async function getPlanCompliance() {
         }
         
         const totalEndpoints = Object.values(expectedEndpoints).flat().length;
-        logger.info(`✅ Parsed ${Object.keys(expectedEndpoints).length} categories, ${totalEndpoints} endpoints from strategy file`);
-        logger.info(`📊 Categories: ${Object.keys(expectedEndpoints).join(', ')}`);
+        logger.info(`📊 Parse Summary:`);
+        logger.info(`   Categories detected: ${categoryCount}`);
+        logger.info(`   Endpoints detected: ${endpointCount}`);
+        logger.info(`   Stored in expectedEndpoints: ${Object.keys(expectedEndpoints).length} categories, ${totalEndpoints} endpoints`);
+        logger.info(`   Categories: ${Object.keys(expectedEndpoints).join(', ')}`);
       } catch (parseError) {
-        logger.error('Failed to parse SMART_ENDPOINT_STRATEGY_V2.md:', parseError);
+        logger.error('❌ Failed to parse SMART_ENDPOINT_STRATEGY_V2.md:', {
+          message: parseError.message,
+          stack: parseError.stack,
+          name: parseError.name
+        });
+        logger.error(`📍 Parser was working on: ${Object.keys(expectedEndpoints).length} categories found so far`);
         // Fallback to minimal plan if parsing fails
+        logger.warn('⚠️  Using fallback plan (4 auth endpoints only)');
         expectedEndpoints = {
           authentication: [
             { method: 'POST', path: '/api/v1/auth/register', description: 'User registration' },
@@ -1547,7 +1570,15 @@ async function getPlanCompliance() {
         };
       }
     } else {
-      logger.warn('⚠️ SMART_ENDPOINT_STRATEGY_V2.md not found, using fallback plan');
+      logger.warn(`⚠️  SMART_ENDPOINT_STRATEGY_V2.md not found at: ${strategyFilePath}`);
+      logger.warn('⚠️  Using fallback plan (4 auth endpoints only)');
+      // Check parent directories
+      const docsDir = path.join(__dirname, '..', '..', 'docs');
+      const roadmapDir = path.join(docsDir, 'roadmap');
+      logger.info(`📁 Checking paths:`);
+      logger.info(`   docs/: ${fs.existsSync(docsDir) ? '✅ exists' : '❌ not found'}`);
+      logger.info(`   docs/roadmap/: ${fs.existsSync(roadmapDir) ? '✅ exists' : '❌ not found'}`);
+      
       // Fallback to minimal plan
       expectedEndpoints = {
         authentication: [
