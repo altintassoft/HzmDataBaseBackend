@@ -1531,7 +1531,9 @@ async function getPlanCompliance() {
           }
         }
         
-        logger.info(`✅ Parsed ${Object.keys(expectedEndpoints).length} categories from strategy file`);
+        const totalEndpoints = Object.values(expectedEndpoints).flat().length;
+        logger.info(`✅ Parsed ${Object.keys(expectedEndpoints).length} categories, ${totalEndpoints} endpoints from strategy file`);
+        logger.info(`📊 Categories: ${Object.keys(expectedEndpoints).join(', ')}`);
       } catch (parseError) {
         logger.error('Failed to parse SMART_ENDPOINT_STRATEGY_V2.md:', parseError);
         // Fallback to minimal plan if parsing fails
