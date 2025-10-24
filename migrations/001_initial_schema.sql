@@ -1,6 +1,19 @@
 -- HZM Platform Initial Schema
 -- Version: 1.0.0
 -- Description: Core tables for multi-tenant DBaaS platform
+-- FORCE-RERUN: true
+
+-- Migration Tracking Table
+-- This table tracks which migrations have been executed
+-- Note: Also created programmatically by migrate.js for backward compatibility
+CREATE TABLE IF NOT EXISTS public.schema_migrations (
+  id SERIAL PRIMARY KEY,
+  migration_number INTEGER UNIQUE NOT NULL,
+  migration_name VARCHAR(255) NOT NULL,
+  executed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  checksum VARCHAR(64),
+  executed_by VARCHAR(255)
+);
 
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
