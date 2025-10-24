@@ -7,8 +7,8 @@
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS core.projects (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
+  id SERIAL PRIMARY KEY,
+  tenant_id INTEGER NOT NULL REFERENCES core.tenants(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived', 'completed')),
@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS core.projects (
   -- Audit fields
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE,
-  created_by UUID REFERENCES core.users(id),
+  created_by INTEGER REFERENCES core.users(id),
   is_deleted BOOLEAN DEFAULT false,
   deleted_at TIMESTAMP WITH TIME ZONE,
-  deleted_by UUID REFERENCES core.users(id)
+  deleted_by INTEGER REFERENCES core.users(id)
 );
 
 -- ============================================================================
@@ -44,7 +44,7 @@ ALTER TABLE core.projects ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only see projects from their own tenant
 CREATE POLICY projects_tenant_isolation ON core.projects
-  USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+  USING (tenant_id = current_setting('app.current_tenant_id', true)::INTEGER);
 
 -- ============================================================================
 -- COMMENTS
@@ -59,4 +59,5 @@ COMMENT ON COLUMN core.projects.status IS 'Project status: active, inactive, arc
 COMMENT ON COLUMN core.projects.created_at IS 'Project creation timestamp';
 COMMENT ON COLUMN core.projects.created_by IS 'User who created the project';
 COMMENT ON COLUMN core.projects.is_deleted IS 'Soft delete flag';
+
 
