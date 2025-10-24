@@ -20,7 +20,7 @@ const router = express.Router();
 // ============================================================================
 
 // Whitelist - Sadece izin verilen type'lar
-const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations', 'architecture-compliance'];
+const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations', 'architecture-compliance', 'table-comparison'];
 const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraints', 'tracking'];
 const ALLOWED_SCHEMAS = ['core', 'app', 'cfg', 'ops'];
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
@@ -104,6 +104,10 @@ router.get('/database', authenticateJWT, async (req, res) => {
 
       case 'architecture-compliance':
         result = await getArchitectureCompliance(includes);
+        break;
+
+      case 'table-comparison':
+        result = await getTableComparison();
         break;
 
       default:
@@ -1162,6 +1166,123 @@ async function getArchitectureCompliance(includes = []) {
       authentication_usage: { endpoints: [], stats: { total: 0, correct: 0, wrong: 0, missing: 0 } },
       api_key_implementation: [],
       priority_actions: []
+    };
+  }
+}
+
+// ============================================================================
+// TABLE COMPARISON - Compare expected tables (from migrations) vs actual (from DB)
+// ============================================================================
+async function getTableComparison() {
+  try {
+    logger.info('Generating table comparison report...');
+    
+    // 1. Get expected tables from migration files
+    const expectedTables = new Set();
+    const migrationFiles = fs.readdirSync(MIGRATIONS_DIR)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+    
+    for (const file of migrationFiles) {
+      const filePath = path.join(MIGRATIONS_DIR, file);
+      const content = fs.readFileSync(filePath, 'utf8');
+      
+      // Parse CREATE TABLE statements
+      // Matches: CREATE TABLE [IF NOT EXISTS] schema.table
+      const createTableRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_]+)\.([a-z_]+)/gi;
+      let match;
+      
+      while ((match = createTableRegex.exec(content)) !== null) {
+        const schema = match[1];
+        const table = match[2];
+        
+        // Only track tables in our allowed schemas
+        if (ALLOWED_SCHEMAS.includes(schema)) {
+          expectedTables.add(`${schema}.${table}`);
+        }
+      }
+    }
+    
+    // 2. Get actual tables from database
+    const actualTablesResult = await pool.query(`
+      SELECT 
+        schemaname,
+        tablename,
+        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+      FROM pg_tables
+      WHERE schemaname = ANY($1)
+      ORDER BY schemaname, tablename;
+    `, [ALLOWED_SCHEMAS]);
+    
+    const actualTables = new Map();
+    for (const row of actualTablesResult.rows) {
+      const fullName = `${row.schemaname}.${row.tablename}`;
+      actualTables.set(fullName, {
+        schema: row.schemaname,
+        table: row.tablename,
+        size: row.size
+      });
+    }
+    
+    // 3. Compare and categorize
+    const comparison = [];
+    const expectedArray = Array.from(expectedTables).sort();
+    const actualArray = Array.from(actualTables.keys()).sort();
+    
+    // All unique tables (expected or actual)
+    const allTables = new Set([...expectedArray, ...actualArray]);
+    
+    for (const fullName of Array.from(allTables).sort()) {
+      const inCode = expectedTables.has(fullName);
+      const inBackend = actualTables.has(fullName);
+      const tableInfo = actualTables.get(fullName);
+      
+      let status;
+      if (inCode && inBackend) {
+        status = 'match'; // ✅ UYUMLU
+      } else if (inCode && !inBackend) {
+        status = 'missing'; // ⚠️ MIGRATION GEREKLI
+      } else if (!inCode && inBackend) {
+        status = 'extra'; // 🔴 FAZLADAN
+      }
+      
+      comparison.push({
+        table: fullName,
+        schema: fullName.split('.')[0],
+        tableName: fullName.split('.')[1],
+        inCode,
+        inBackend,
+        status,
+        size: tableInfo ? tableInfo.size : '-'
+      });
+    }
+    
+    // 4. Calculate stats
+    const stats = {
+      total: comparison.length,
+      expected: expectedArray.length,
+      actual: actualArray.length,
+      match: comparison.filter(t => t.status === 'match').length,
+      missing: comparison.filter(t => t.status === 'missing').length,
+      extra: comparison.filter(t => t.status === 'extra').length
+    };
+    
+    return {
+      tables: comparison,
+      stats,
+      expectedTables: expectedArray,
+      actualTables: actualArray
+    };
+    
+  } catch (error) {
+    logger.error('Failed to generate table comparison:', error);
+    return {
+      error: 'Failed to generate table comparison',
+      message: error.message,
+      tables: [],
+      stats: { total: 0, expected: 0, actual: 0, match: 0, missing: 0, extra: 0 },
+      expectedTables: [],
+      actualTables: []
     };
   }
 }
