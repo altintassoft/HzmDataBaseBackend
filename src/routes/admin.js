@@ -1195,10 +1195,12 @@ async function getTableComparison() {
       while ((match = createTableRegex.exec(content)) !== null) {
         const schema = match[1];
         const table = match[2];
+        const fullName = `${schema}.${table}`;
         
-        // Track tables in allowed schemas + public schema (for schema_migrations)
-        if (ALLOWED_SCHEMAS.includes(schema) || schema === 'public') {
-          expectedTables.add(`${schema}.${table}`);
+        // Track tables in allowed schemas
+        // Exception: Allow public.schema_migrations (migration tracking table)
+        if (ALLOWED_SCHEMAS.includes(schema) || fullName === 'public.schema_migrations') {
+          expectedTables.add(fullName);
         }
       }
     }
