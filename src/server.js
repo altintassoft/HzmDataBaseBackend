@@ -35,7 +35,7 @@ app.use((req, res, next) => {
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectRoutes);
-app.use('/api/v1/generic-data', genericDataRoutes);
+app.use('/api/v1/data', genericDataRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/api-keys', apiKeysRoutes);
 
