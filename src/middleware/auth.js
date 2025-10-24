@@ -51,30 +51,45 @@ const authenticateJWT = async (req, res, next) => {
 };
 
 /**
- * API Key + API Password Authentication (for programmatic access)
- * Checks for X-API-Key and X-API-Password headers
+ * API Key + API Password + Email Authentication (for programmatic access)
+ * Checks for X-Email, X-API-Key and X-API-Password headers
  * 
  * Usage:
- *   curl -H "X-API-Key: hzm_xxx" -H "X-API-Password: xxx" http://...
+ *   curl -H "X-Email: user@example.com" \
+ *        -H "X-API-Key: hzm_xxx" \
+ *        -H "X-API-Password: xxx" \
+ *        http://...
  */
 const authenticateApiKey = async (req, res, next) => {
   try {
+    const email = req.headers['x-email'];
     const apiKey = req.headers['x-api-key'];
     const apiPassword = req.headers['x-api-password'];
 
-    // Check if headers exist
-    if (!apiKey || !apiPassword) {
+    // Check if all headers exist
+    if (!email || !apiKey || !apiPassword) {
       return res.status(401).json({
         success: false,
         error: 'Missing credentials',
-        message: 'Both X-API-Key and X-API-Password headers required',
+        message: 'X-Email, X-API-Key and X-API-Password headers required',
         required: {
-          headers: ['X-API-Key', 'X-API-Password']
+          headers: ['X-Email', 'X-API-Key', 'X-API-Password']
         },
         example: {
+          'X-Email': 'user@example.com',
           'X-API-Key': 'hzm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
           'X-API-Password': 'your-api-password-here'
         }
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email format',
+        message: 'Please provide a valid email address'
       });
     }
 
@@ -87,7 +102,7 @@ const authenticateApiKey = async (req, res, next) => {
       });
     }
 
-    // Query database for matching API Key
+    // Query database: Find user by EMAIL first, then verify API Key
     const result = await pool.query(`
       SELECT 
         id,
@@ -96,21 +111,32 @@ const authenticateApiKey = async (req, res, next) => {
         role,
         api_key,
         api_password,
-        is_active
+        is_active,
+        is_deleted
       FROM core.users
-      WHERE api_key = $1
+      WHERE email = $1
         AND is_active = true
-    `, [apiKey]);
+        AND is_deleted = false
+    `, [email]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid API Key',
-        message: 'API Key not found or user is inactive'
+        error: 'Invalid email',
+        message: 'User not found with this email or user is inactive'
       });
     }
 
     const user = result.rows[0];
+
+    // Verify API Key belongs to this user
+    if (user.api_key !== apiKey) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid API Key',
+        message: 'This API Key does not belong to the provided email'
+      });
+    }
 
     // Verify API Password (plain text comparison for now)
     // TODO: In production, this should be hashed comparison
@@ -131,6 +157,15 @@ const authenticateApiKey = async (req, res, next) => {
       logger.warn('Failed to update api_key_last_used_at:', err.message);
     });
 
+    // Set RLS context (Row Level Security)
+    try {
+      await pool.query('SELECT app.set_context($1, $2)', [user.tenant_id, user.id]);
+      logger.debug(`RLS context set: tenant_id=${user.tenant_id}, user_id=${user.id}`);
+    } catch (err) {
+      logger.warn('Failed to set RLS context:', err.message);
+      // Continue anyway (non-critical)
+    }
+
     // Attach user to request
     req.user = {
       id: user.id,
@@ -140,7 +175,7 @@ const authenticateApiKey = async (req, res, next) => {
       authenticated_via: 'api_key'
     };
 
-    logger.info(`API Key authenticated: ${user.email} (${user.role})`);
+    logger.info(`✅ API Key authenticated: ${user.email} (${user.role}) [tenant_id=${user.tenant_id}]`);
 
     next();
   } catch (error) {
