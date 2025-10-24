@@ -893,6 +893,196 @@ async function getArchitectureCompliance(includes = []) {
     
     const apiKeyScore = (Object.values(apiKeyFeatures).filter(Boolean).length / Object.keys(apiKeyFeatures).length) * 100;
 
+    // 8. Authentication Usage Analysis (REAL DATA - Scan route files)
+    const authUsageAnalysis = [];
+    
+    // Scan all route files
+    const routeFiles = fs.readdirSync(routesDir).filter(f => f.endsWith('.js'));
+    
+    for (const file of routeFiles) {
+      const filePath = path.join(routesDir, file);
+      const content = fs.readFileSync(filePath, 'utf8');
+      
+      // Find all router definitions
+      const routerRegex = /router\.(get|post|put|delete|patch)\(['"]([^'"]+)['"](?:,\s*(\w+))?,/g;
+      let match;
+      
+      while ((match = routerRegex.exec(content)) !== null) {
+        const method = match[1].toUpperCase();
+        const endpoint = match[2];
+        const middleware = match[3] || null;
+        
+        let currentAuth = 'none';
+        let expectedAuth = 'api_key'; // Default expectation
+        
+        // Determine current auth
+        if (middleware === 'authenticateJWT') {
+          currentAuth = 'jwt';
+        } else if (middleware === 'authenticateApiKey') {
+          currentAuth = 'api_key';
+        }
+        
+        // Determine expected auth
+        if (endpoint.includes('/auth/') && (endpoint.includes('login') || endpoint.includes('register'))) {
+          expectedAuth = 'jwt';
+        } else if (endpoint === '/me' || endpoint.includes('/auth/me')) {
+          expectedAuth = 'jwt';
+        }
+        
+        const isCorrect = currentAuth === expectedAuth;
+        
+        authUsageAnalysis.push({
+          endpoint: `/api/v1${file === 'auth.js' ? '/auth' : file === 'admin.js' ? '/admin' : ''}${endpoint}`,
+          method,
+          current_auth: currentAuth,
+          expected_auth: expectedAuth,
+          status: isCorrect ? 'correct' : (currentAuth === 'none' ? 'missing' : 'wrong')
+        });
+      }
+    }
+    
+    // Calculate auth usage stats
+    const authStats = {
+      total: authUsageAnalysis.length,
+      correct: authUsageAnalysis.filter(a => a.status === 'correct').length,
+      wrong: authUsageAnalysis.filter(a => a.status === 'wrong').length,
+      missing: authUsageAnalysis.filter(a => a.status === 'missing').length
+    };
+    
+    // 9. API Key Implementation Details
+    const apiKeyImplementation = [
+      {
+        feature: 'API Key Storage',
+        status: apiKeyFeatures.api_key_exists ? 'implemented' : 'missing',
+        table: 'core.users',
+        column: 'api_key',
+        notes: apiKeyFeatures.api_key_exists ? 'VARCHAR(100), format: hzm_xxxxx' : 'Column not found'
+      },
+      {
+        feature: 'API Password',
+        status: apiKeyFeatures.api_password_exists ? 'warning' : 'missing',
+        table: 'core.users',
+        column: 'api_password',
+        notes: apiKeyFeatures.api_password_exists ? '⚠️ Plaintext - Should be hashed (Argon2id)' : 'Column not found'
+      },
+      {
+        feature: 'API Key Created At',
+        status: apiKeyColumns.rows.some(r => r.column_name === 'api_key_created_at') ? 'implemented' : 'missing',
+        table: 'core.users',
+        column: 'api_key_created_at',
+        notes: 'TIMESTAMP'
+      },
+      {
+        feature: 'API Key Last Used',
+        status: apiKeyColumns.rows.some(r => r.column_name === 'api_key_last_used_at') ? 'implemented' : 'missing',
+        table: 'core.users',
+        column: 'api_key_last_used_at',
+        notes: 'Auto-updated on each request'
+      },
+      {
+        feature: 'Scopes (Permissions)',
+        status: apiKeyFeatures.scopes ? 'implemented' : 'missing',
+        table: 'core.users',
+        column: 'scopes',
+        notes: apiKeyFeatures.scopes ? 'TEXT[] - read/write/admin permissions' : 'Phase 2 - Not yet implemented'
+      },
+      {
+        feature: 'IP Allowlist',
+        status: apiKeyFeatures.ip_allowlist ? 'implemented' : 'missing',
+        table: 'core.users',
+        column: 'ip_allowlist',
+        notes: apiKeyFeatures.ip_allowlist ? 'INET[] - Restrict by IP' : 'Phase 2 - Not yet implemented'
+      },
+      {
+        feature: 'Rate Limiting',
+        status: hasRedis ? 'implemented' : 'missing',
+        table: '-',
+        column: '-',
+        notes: hasRedis ? 'Redis-based rate limiting' : 'Phase 2 - Requires Redis'
+      },
+      {
+        feature: 'Expiry Date',
+        status: apiKeyFeatures.expires_at ? 'implemented' : 'missing',
+        table: 'core.users',
+        column: 'expires_at',
+        notes: 'Phase 3 - Auto-expire keys after X days'
+      },
+      {
+        feature: 'Key Rotation',
+        status: apiKeyFeatures.rotated_from_key_id ? 'implemented' : 'missing',
+        table: 'core.users',
+        column: 'rotated_from_key_id',
+        notes: 'Phase 3 - Track key rotation history'
+      },
+      {
+        feature: 'Key Label',
+        status: apiKeyFeatures.label ? 'implemented' : 'missing',
+        table: 'core.users',
+        column: 'label',
+        notes: 'Phase 3 - User-friendly key names'
+      }
+    ];
+    
+    // 10. Priority Actions (Enhanced)
+    const priorityActions = [
+      {
+        priority: 'p0',
+        title: 'Hash API Password',
+        description: 'API Password is stored in plaintext. Use Argon2id hashing.',
+        phase: 'Phase 1',
+        status: apiKeyFeatures.api_password_exists && !apiKeyColumns.rows.some(r => r.column_name === 'api_password_hash') ? 'pending' : 'done',
+        impact: 'Security risk - Passwords visible in DB'
+      },
+      {
+        priority: 'p1',
+        title: 'Migrate Admin Endpoints to API Key',
+        description: '/admin/database and other admin endpoints should use API Key instead of JWT',
+        phase: 'Phase 2',
+        status: authUsageAnalysis.some(a => a.endpoint.includes('/admin') && a.current_auth === 'jwt') ? 'pending' : 'done',
+        impact: 'JWT should only be for web sessions, not programmatic access'
+      },
+      {
+        priority: 'p1',
+        title: 'Migrate CRUD Endpoints to API Key',
+        description: '/projects/*, /generic-data/* should use API Key instead of JWT',
+        phase: 'Phase 2',
+        status: authStats.wrong > 3 ? 'pending' : 'done',
+        impact: 'Consistency - All non-auth endpoints should use API Key'
+      },
+      {
+        priority: 'p2',
+        title: 'Implement Scopes System',
+        description: 'Add role-based permissions (read/write/admin) to API keys',
+        phase: 'Phase 2',
+        status: apiKeyFeatures.scopes ? 'done' : 'pending',
+        impact: 'Fine-grained access control'
+      },
+      {
+        priority: 'p2',
+        title: 'Implement IP Allowlist',
+        description: 'Restrict API key usage by IP address',
+        phase: 'Phase 2',
+        status: apiKeyFeatures.ip_allowlist ? 'done' : 'pending',
+        impact: 'Additional security layer'
+      },
+      {
+        priority: 'p2',
+        title: 'Implement Rate Limiting',
+        description: 'Add Redis-based multi-tier rate limiting',
+        phase: 'Phase 2',
+        status: hasRedis && securityChecks.rate_limiting ? 'done' : 'pending',
+        impact: 'Prevent API abuse'
+      },
+      {
+        priority: 'p3',
+        title: 'API Key Expiry',
+        description: 'Auto-expire keys after X days for security',
+        phase: 'Phase 3',
+        status: apiKeyFeatures.expires_at ? 'done' : 'pending',
+        impact: 'Enforce key rotation'
+      }
+    ];
+
     return {
       overall_score: overallScore,
       category_scores: {
@@ -927,7 +1117,13 @@ async function getArchitectureCompliance(includes = []) {
         features: apiKeyFeatures
       },
       security_checklist: securityChecks,
-      action_plan: actionPlan
+      action_plan: actionPlan,
+      authentication_usage: {
+        endpoints: authUsageAnalysis,
+        stats: authStats
+      },
+      api_key_implementation: apiKeyImplementation,
+      priority_actions: priorityActions
     };
   } catch (error) {
     logger.error('Failed to generate architecture compliance report:', error);
@@ -947,7 +1143,10 @@ async function getArchitectureCompliance(includes = []) {
       endpoint_analysis: { total: 0, target: 0, extra: [], missing: [] },
       api_key_architecture: { format_compliance: 0, features: {} },
       security_checklist: {},
-      action_plan: { p0_critical: [], p1_high: [], p2_medium: [] }
+      action_plan: { p0_critical: [], p1_high: [], p2_medium: [] },
+      authentication_usage: { endpoints: [], stats: { total: 0, correct: 0, wrong: 0, missing: 0 } },
+      api_key_implementation: [],
+      priority_actions: []
     };
   }
 }
