@@ -1489,11 +1489,16 @@ async function getPlanCompliance() {
             }
           }
           
-          // Detect endpoint definitions (e.g., "#### POST /api/v1/auth/login")
+          // Detect endpoint definitions (e.g., "#### POST /auth/login")
           const endpointMatch = line.match(/####\s+(GET|POST|PUT|PATCH|DELETE)\s+(\/[^\s\n]+)/);
           if (endpointMatch && currentCategory) {
             const method = endpointMatch[1];
-            const path = endpointMatch[2];
+            let path = endpointMatch[2];
+            
+            // Add /api/v1 prefix if not present (except for /health)
+            if (!path.startsWith('/api/v1') && !path.startsWith('/health')) {
+              path = '/api/v1' + path;
+            }
             
             // Look for description in the next few lines (after "- **Auth**:" line)
             let description = '';
