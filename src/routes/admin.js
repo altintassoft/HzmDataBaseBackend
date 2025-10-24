@@ -1203,7 +1203,8 @@ async function getTableComparison() {
       }
     }
     
-    // 2. Get actual tables from database
+    // 2. Get actual tables from database (include public schema for schema_migrations)
+    const schemasToCheck = [...ALLOWED_SCHEMAS, 'public'];
     const actualTablesResult = await pool.query(`
       SELECT 
         schemaname,
@@ -1212,7 +1213,7 @@ async function getTableComparison() {
       FROM pg_tables
       WHERE schemaname = ANY($1)
       ORDER BY schemaname, tablename;
-    `, [ALLOWED_SCHEMAS]);
+    `, [schemasToCheck]);
     
     const actualTables = new Map();
     for (const row of actualTablesResult.rows) {
