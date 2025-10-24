@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
-const { authenticateJWT, authenticateApiKey } = require('../middleware/auth');
+const { authenticateJwtOrApiKey } = require('../middleware/auth');
 const MigrationParser = require('../utils/migrationParser');
 const SchemaInspector = require('../utils/schemaInspector');
 const MigrationComparator = require('../utils/migrationComparator');
@@ -25,10 +25,10 @@ const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraint
 const ALLOWED_SCHEMAS = ['core', 'app', 'cfg', 'ops'];
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
-router.get('/database', authenticateApiKey, async (req, res) => {
+router.get('/database', authenticateJwtOrApiKey, async (req, res) => {
   try {
     const { type, include, schema, table, limit, offset } = req.query;
-    const user = req.user; // API Key middleware sets this
+    const user = req.user; // JWT or API Key middleware sets this
 
     // 🐛 DEBUG: Log incoming request
     logger.info('Admin database request:', {

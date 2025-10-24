@@ -189,6 +189,168 @@ const authenticateApiKey = async (req, res, next) => {
 };
 
 /**
+ * Flexible Authentication: JWT OR API Key
+ * Accepts both JWT token (Authorization: Bearer) and API Key headers
+ * 
+ * Usage:
+ *   - Frontend: Authorization: Bearer <token>
+ *   - External: X-Email, X-API-Key, X-API-Password
+ */
+const authenticateJwtOrApiKey = async (req, res, next) => {
+  // Try JWT first
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.substring(7);
+      const decoded = jwt.verify(token, config.jwt.secret);
+      
+      req.user = {
+        id: decoded.userId,
+        tenant_id: decoded.tenantId,
+        email: decoded.email,
+        role: decoded.role,
+        authenticated_via: 'jwt'
+      };
+
+      logger.debug(`✅ JWT authenticated: ${decoded.email} (${decoded.role})`);
+      return next();
+    } catch (jwtError) {
+      logger.debug(`JWT verification failed: ${jwtError.message}. Trying API Key...`);
+      // Fall through to API Key check
+    }
+  }
+
+  // Try API Key
+  const email = req.headers['x-email'];
+  const apiKey = req.headers['x-api-key'];
+  const apiPassword = req.headers['x-api-password'];
+
+  if (email && apiKey && apiPassword) {
+    try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid email format',
+          message: 'Please provide a valid email address'
+        });
+      }
+
+      // Validate API Key format
+      if (!apiKey.startsWith('hzm_')) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid API Key format',
+          message: 'API Key must start with "hzm_"'
+        });
+      }
+
+      // Query database
+      const result = await pool.query(`
+        SELECT 
+          id,
+          tenant_id,
+          email,
+          role,
+          api_key,
+          api_password,
+          is_active,
+          is_deleted
+        FROM core.users
+        WHERE email = $1
+          AND is_active = true
+          AND is_deleted = false
+      `, [email]);
+
+      if (result.rows.length === 0) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid email',
+          message: 'User not found with this email or user is inactive'
+        });
+      }
+
+      const user = result.rows[0];
+
+      // Verify API Key
+      if (user.api_key !== apiKey) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid API Key',
+          message: 'This API Key does not belong to the provided email'
+        });
+      }
+
+      // Verify API Password
+      if (user.api_password !== apiPassword) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid API Password',
+          message: 'API Password does not match'
+        });
+      }
+
+      // Update last_used_at
+      pool.query(`
+        UPDATE core.users
+        SET api_key_last_used_at = NOW()
+        WHERE id = $1
+      `, [user.id]).catch(err => {
+        logger.warn('Failed to update api_key_last_used_at:', err.message);
+      });
+
+      // Set RLS context
+      try {
+        await pool.query('SELECT app.set_context($1, $2)', [user.tenant_id, user.id]);
+        logger.debug(`RLS context set: tenant_id=${user.tenant_id}, user_id=${user.id}`);
+      } catch (err) {
+        logger.warn('Failed to set RLS context:', err.message);
+      }
+
+      req.user = {
+        id: user.id,
+        tenant_id: user.tenant_id,
+        email: user.email,
+        role: user.role,
+        authenticated_via: 'api_key'
+      };
+
+      logger.info(`✅ API Key authenticated: ${user.email} (${user.role}) [tenant_id=${user.tenant_id}]`);
+      return next();
+    } catch (error) {
+      logger.error('API Key authentication error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Authentication failed',
+        message: error.message
+      });
+    }
+  }
+
+  // Neither JWT nor API Key provided/valid
+  return res.status(401).json({
+    success: false,
+    error: 'Authentication required',
+    message: 'Provide either JWT token (Authorization: Bearer) or API Key headers (X-Email, X-API-Key, X-API-Password)',
+    acceptedMethods: [
+      {
+        method: 'JWT',
+        header: 'Authorization: Bearer <token>'
+      },
+      {
+        method: 'API Key',
+        headers: {
+          'X-Email': 'user@example.com',
+          'X-API-Key': 'hzm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+          'X-API-Password': 'your-api-password-here'
+        }
+      }
+    ]
+  });
+};
+
+/**
  * Master Admin Only Authorization
  * Requires user to have role='master_admin'
  * Use AFTER authenticateApiKey or authenticateJWT
@@ -242,6 +404,7 @@ const requireAdmin = (req, res, next) => {
 module.exports = {
   authenticateJWT,
   authenticateApiKey,
+  authenticateJwtOrApiKey,
   requireMasterAdmin,
   requireAdmin
 };
