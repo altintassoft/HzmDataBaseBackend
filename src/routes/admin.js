@@ -896,11 +896,12 @@ async function getArchitectureCompliance(includes = []) {
     // 8. Authentication Usage Analysis (REAL DATA - Scan route files)
     const authUsageAnalysis = [];
     
-    // Scan all route files
-    const authRouteFiles = fs.readdirSync(routesDir).filter(f => f.endsWith('.js'));
+    // Scan all route files in routes directory
+    const routeFilesDir = path.join(__dirname);
+    const authRouteFiles = fs.readdirSync(routeFilesDir).filter(f => f.endsWith('.js') && f !== 'admin.js'); // Exclude self to avoid circular parsing
     
     for (const file of authRouteFiles) {
-      const filePath = path.join(routesDir, file);
+      const filePath = path.join(routeFilesDir, file);
       const content = fs.readFileSync(filePath, 'utf8');
       
       // Find all router definitions
@@ -923,16 +924,29 @@ async function getArchitectureCompliance(includes = []) {
         }
         
         // Determine expected auth
-        if (endpoint.includes('/auth/') && (endpoint.includes('login') || endpoint.includes('register'))) {
+        // Only these 3 endpoints should use JWT: /auth/login, /auth/register, /auth/me
+        // All others should use API Key
+        if (file === 'auth.js' && (endpoint === '/login' || endpoint === '/register' || endpoint === '/me')) {
           expectedAuth = 'jwt';
-        } else if (endpoint === '/me' || endpoint.includes('/auth/me')) {
-          expectedAuth = 'jwt';
+        } else if (file === 'health.js') {
+          expectedAuth = 'none'; // Health check is public
+        } else {
+          expectedAuth = 'api_key'; // Everything else should use API Key
         }
         
         const isCorrect = currentAuth === expectedAuth;
         
+        // Determine endpoint prefix from filename
+        let prefix = '';
+        if (file === 'auth.js') prefix = '/auth';
+        else if (file === 'api-keys.js') prefix = '/api-keys';
+        else if (file === 'protected.js') prefix = '/protected';
+        else if (file === 'projects.js') prefix = '/projects';
+        else if (file === 'generic-data.js') prefix = '/generic-data';
+        // admin.js is excluded, health.js has no prefix
+        
         authUsageAnalysis.push({
-          endpoint: `/api/v1${file === 'auth.js' ? '/auth' : file === 'admin.js' ? '/admin' : ''}${endpoint}`,
+          endpoint: `/api/v1${prefix}${endpoint}`,
           method,
           current_auth: currentAuth,
           expected_auth: expectedAuth,
