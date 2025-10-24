@@ -12,6 +12,9 @@ INSERT INTO core.users (
   email,
   password_hash,
   role,
+  api_key,
+  api_password,
+  api_key_created_at,
   is_active,
   created_at,
   updated_at
@@ -21,6 +24,9 @@ VALUES (
   'ozgurhzm@hzmsoft.com',
   '$2b$10$YcCewJ5gTNKVdZTJw.L5qOU3/Cgaanc2ha.Ulwr45DE.vzUTDhyRO',
   'master_admin',
+  'hzm_master_admin_2025_secure_key_01234567890',
+  'MasterAdmin2025!SecurePassword',
+  NOW(),
   true,
   NOW(),
   NOW()
