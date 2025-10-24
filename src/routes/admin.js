@@ -1442,16 +1442,8 @@ async function getPlanCompliance() {
   try {
     logger.info('📊 Generating Plan Compliance Report...');
     
-    // 1. Parse SMART_ENDPOINT_STRATEGY_V2.md to extract expected endpoints
-    const strategyFilePath = path.join(__dirname, '../../../HzmVeriTabaniYolHaritasi/SMART_ENDPOINT_STRATEGY_V2.md');
-    
-    if (!fs.existsSync(strategyFilePath)) {
-      throw new Error('SMART_ENDPOINT_STRATEGY_V2.md not found');
-    }
-    
-    const strategyContent = fs.readFileSync(strategyFilePath, 'utf8');
-    
-    // Define expected endpoints from the strategy document
+    // 1. Expected endpoints from SMART_ENDPOINT_STRATEGY_V2.md (hardcoded for reliability)
+    // NOTE: These are the target endpoints defined in our strategy document
     const expectedEndpoints = {
       authentication: [
         { method: 'POST', path: '/api/v1/auth/register', description: 'User registration' },
