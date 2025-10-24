@@ -1196,8 +1196,8 @@ async function getTableComparison() {
         const schema = match[1];
         const table = match[2];
         
-        // Only track tables in our allowed schemas
-        if (ALLOWED_SCHEMAS.includes(schema)) {
+        // Track tables in allowed schemas + public schema (for schema_migrations)
+        if (ALLOWED_SCHEMAS.includes(schema) || schema === 'public') {
           expectedTables.add(`${schema}.${table}`);
         }
       }
