@@ -20,7 +20,7 @@ const router = express.Router();
 // ============================================================================
 
 // Whitelist - Sadece izin verilen type'lar
-const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations', 'architecture-compliance', 'table-comparison'];
+const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations', 'architecture-compliance', 'table-comparison', 'all-tables-raw'];
 const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraints', 'tracking'];
 const ALLOWED_SCHEMAS = ['core', 'app', 'cfg', 'ops'];
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
@@ -108,6 +108,17 @@ router.get('/database', authenticateJWT, async (req, res) => {
 
       case 'table-comparison':
         result = await getTableComparison();
+        break;
+      
+      case 'all-tables-raw':
+        // Master Admin only - NO FILTERS!
+        if (user.role !== 'master_admin') {
+          return res.status(403).json({ 
+            error: 'Forbidden', 
+            message: 'Bu endpoint sadece Master Admin içindir.' 
+          });
+        }
+        result = await getAllTablesRaw();
         break;
 
       default:
@@ -1291,6 +1302,40 @@ async function getTableComparison() {
       expectedTables: [],
       actualTables: []
     };
+  }
+}
+
+/**
+ * Get ALL tables from database - NO FILTERS (Master Admin only)
+ */
+async function getAllTablesRaw() {
+  try {
+    logger.info('🔓 Getting ALL tables (NO FILTERS - Master Admin access)');
+    
+    const result = await pool.query(`
+      SELECT 
+        schemaname,
+        tablename,
+        pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,
+        pg_total_relation_size(schemaname||'.'||tablename) as size_bytes
+      FROM pg_tables
+      WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+      ORDER BY schemaname, tablename;
+    `);
+    
+    return {
+      total: result.rows.length,
+      tables: result.rows.map(row => ({
+        schema: row.schemaname,
+        table: row.tablename,
+        fullName: `${row.schemaname}.${row.tablename}`,
+        size: row.size,
+        sizeBytes: parseInt(row.size_bytes)
+      }))
+    };
+  } catch (error) {
+    logger.error('Error getting all tables (raw):', error);
+    throw error;
   }
 }
 
