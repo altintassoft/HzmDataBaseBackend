@@ -897,9 +897,9 @@ async function getArchitectureCompliance(includes = []) {
     const authUsageAnalysis = [];
     
     // Scan all route files
-    const routeFiles = fs.readdirSync(routesDir).filter(f => f.endsWith('.js'));
+    const authRouteFiles = fs.readdirSync(routesDir).filter(f => f.endsWith('.js'));
     
-    for (const file of routeFiles) {
+    for (const file of authRouteFiles) {
       const filePath = path.join(routesDir, file);
       const content = fs.readFileSync(filePath, 'utf8');
       
