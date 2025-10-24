@@ -1220,11 +1220,15 @@ async function getTableComparison() {
     const actualTables = new Map();
     for (const row of actualTablesResult.rows) {
       const fullName = `${row.schemaname}.${row.tablename}`;
-      actualTables.set(fullName, {
-        schema: row.schemaname,
-        table: row.tablename,
-        size: row.size
-      });
+      
+      // Filter: Only allow tables in ALLOWED_SCHEMAS or public.schema_migrations
+      if (ALLOWED_SCHEMAS.includes(row.schemaname) || fullName === 'public.schema_migrations') {
+        actualTables.set(fullName, {
+          schema: row.schemaname,
+          table: row.tablename,
+          size: row.size
+        });
+      }
     }
     
     // 3. Compare and categorize
