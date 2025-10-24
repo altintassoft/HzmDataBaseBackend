@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
+const { authenticateJWT } = require('../middleware/auth');
 const MigrationParser = require('../utils/migrationParser');
 const SchemaInspector = require('../utils/schemaInspector');
 const MigrationComparator = require('../utils/migrationComparator');
@@ -24,10 +25,10 @@ const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraint
 const ALLOWED_SCHEMAS = ['core', 'app', 'cfg', 'ops'];
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
-router.get('/database', async (req, res) => {
+router.get('/database', authenticateJWT, async (req, res) => {
   try {
     const { type, include, schema, table, limit, offset } = req.query;
-    const user = req.user || { role: 'user', tenant_id: 1 }; // Get from JWT token (req.user set by auth middleware)
+    const user = req.user; // JWT middleware sets this
 
     // 🐛 DEBUG: Log incoming request
     logger.info('Admin database request:', {

@@ -1,5 +1,7 @@
 const { pool } = require('../config/database');
 const logger = require('../utils/logger');
+const jwt = require('jsonwebtoken');
+const config = require('../config');
 
 // ============================================================================
 // 🔐 AUTHENTICATION MIDDLEWARE
@@ -23,21 +25,19 @@ const authenticateJWT = async (req, res, next) => {
 
     const token = authHeader.substring(7); // Remove "Bearer " prefix
 
-    // TODO: Verify JWT token with jwt.verify()
-    // For now, simple token validation
-    if (!token || token.length < 20) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid token'
-      });
-    }
-
-    // TODO: Decode token and attach user to req.user
+    // Verify and decode JWT token
+    const decoded = jwt.verify(token, config.jwt.secret);
+    
+    // Attach user info to request
     req.user = {
-      id: 1,
-      email: 'temp@example.com',
-      role: 'user'
+      id: decoded.userId,
+      tenant_id: decoded.tenantId,
+      email: decoded.email,
+      role: decoded.role,
+      authenticated_via: 'jwt'
     };
+
+    logger.debug(`JWT authenticated: ${decoded.email} (${decoded.role})`);
 
     next();
   } catch (error) {
