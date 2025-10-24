@@ -30,15 +30,47 @@ async function executeMigration(file, sql, reason = 'new') {
   
   // Split SQL into statements and execute each separately
   // Remove comments first, then split by semicolon
+  // BUT: Respect $$ (dollar-quoted strings) - don't split inside them!
   const cleanSql = sql
     .split('\n')
     .filter(line => !line.trim().startsWith('--'))
     .join('\n');
   
-  const statements = cleanSql
-    .split(';')
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+  // Smart split: respect $$ delimiters
+  const statements = [];
+  let current = '';
+  let inDollarQuote = false;
+  
+  for (let i = 0; i < cleanSql.length; i++) {
+    const char = cleanSql[i];
+    const next = cleanSql[i + 1];
+    
+    // Check for $$ (dollar quote start/end)
+    if (char === '$' && next === '$') {
+      inDollarQuote = !inDollarQuote;
+      current += '$$';
+      i++; // skip next $
+      continue;
+    }
+    
+    // Split on ; only if NOT inside $$...$$
+    if (char === ';' && !inDollarQuote) {
+      const trimmed = current.trim();
+      if (trimmed.length > 0) {
+        statements.push(trimmed);
+      }
+      current = '';
+      continue;
+    }
+    
+    current += char;
+  }
+  
+  // Add last statement if exists
+  const trimmed = current.trim();
+  if (trimmed.length > 0) {
+    statements.push(trimmed);
+  }
   
   logger.info(`📝 Parsed ${statements.length} statements from ${file}`);
   
