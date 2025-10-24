@@ -1459,12 +1459,12 @@ async function getPlanCompliance() {
         
         let currentCategory = null;
         const categoryMap = {
-          'Authentication': 'authentication',
-          'API Keys Management': 'api_keys',
-          'Projects': 'projects',
-          'Generic Data': 'generic_data',
-          'Admin Operations': 'admin',
-          'Health': 'health'
+          'authentication': ['Authentication'],
+          'api_keys': ['API Keys Management', 'API Key Management'],
+          'projects': ['Projects'],
+          'generic_data': ['Generic Data Operations', 'Generic Data'],
+          'admin': ['Admin Operations', 'Admin'],
+          'health': ['Health & Monitoring', 'Health']
         };
         
         for (let i = 0; i < lines.length; i++) {
@@ -1474,7 +1474,16 @@ async function getPlanCompliance() {
           const categoryMatch = line.match(/###\s+\d️⃣\s+([^(]+)/);
           if (categoryMatch) {
             const categoryName = categoryMatch[1].trim();
-            currentCategory = categoryMap[categoryName] || null;
+            
+            // Find matching category key
+            currentCategory = null;
+            for (const [key, patterns] of Object.entries(categoryMap)) {
+              if (patterns.some(pattern => categoryName.startsWith(pattern))) {
+                currentCategory = key;
+                break;
+              }
+            }
+            
             if (currentCategory && !expectedEndpoints[currentCategory]) {
               expectedEndpoints[currentCategory] = [];
             }
@@ -1564,6 +1573,7 @@ async function getPlanCompliance() {
       if (file === 'auth.js') prefix = '/auth';
       else if (file === 'api-keys.js') prefix = '/api-keys';
       else if (file === 'projects.js') prefix = '/projects';
+      else if (file === 'admin.js') prefix = '/admin';
       else if (file === 'protected.js') prefix = '/protected';
       else if (file === 'health.js') {
         prefix = '';
@@ -1591,6 +1601,13 @@ async function getPlanCompliance() {
         });
       }
     }
+    
+    // Add admin endpoint manually (since admin.js is excluded from scan to avoid recursion)
+    actualEndpoints.push({
+      method: 'GET',
+      path: '/api/v1/admin/database',
+      file: 'admin'
+    });
     
     // 3. Compare expected vs actual by category
     const comparison = {};
