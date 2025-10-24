@@ -3,17 +3,8 @@
 -- Description: Core tables for multi-tenant DBaaS platform
 -- FORCE-RERUN: true
 
--- Migration Tracking Table
--- This table tracks which migrations have been executed
--- Note: Also created programmatically by migrate.js for backward compatibility
-CREATE TABLE IF NOT EXISTS public.schema_migrations (
-  id SERIAL PRIMARY KEY,
-  migration_number INTEGER UNIQUE NOT NULL,
-  migration_name VARCHAR(255) NOT NULL,
-  executed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  checksum VARCHAR(64),
-  executed_by VARCHAR(255)
-);
+-- Note: schema_migrations table is created by migrate.js
+-- Additional columns (checksum, executed_by) are added by 007_add_migration_checksum.sql
 
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
