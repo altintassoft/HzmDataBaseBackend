@@ -1443,7 +1443,7 @@ async function getPlanCompliance() {
     logger.info('📊 Generating Plan Compliance Report...');
     
     // 1. Parse SMART_ENDPOINT_STRATEGY_V2.md to extract expected endpoints
-    const strategyFilePath = path.join(__dirname, '..', '..', '..', 'HzmVeriTabaniYolHaritasi', 'SMART_ENDPOINT_STRATEGY_V2.md');
+    const strategyFilePath = path.join(__dirname, '..', '..', 'docs', 'SMART_ENDPOINT_STRATEGY_V2.md');
     
     let expectedEndpoints = {};
     
