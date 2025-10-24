@@ -1442,39 +1442,106 @@ async function getPlanCompliance() {
   try {
     logger.info('📊 Generating Plan Compliance Report...');
     
-    // 1. Expected endpoints from SMART_ENDPOINT_STRATEGY_V2.md (hardcoded for reliability)
-    // NOTE: These are the target endpoints defined in our strategy document
-    const expectedEndpoints = {
-      authentication: [
-        { method: 'POST', path: '/api/v1/auth/register', description: 'User registration' },
-        { method: 'POST', path: '/api/v1/auth/login', description: 'User login' },
-        { method: 'POST', path: '/api/v1/auth/refresh', description: 'Refresh token' }
-      ],
-      generic_data: [
-        { method: 'GET', path: '/api/v1/data/:resource', description: 'List resources' },
-        { method: 'POST', path: '/api/v1/data/:resource', description: 'Create resource' },
-        { method: 'GET', path: '/api/v1/data/:resource/:id', description: 'Get resource by ID' },
-        { method: 'PUT', path: '/api/v1/data/:resource/:id', description: 'Update resource' },
-        { method: 'PATCH', path: '/api/v1/data/:resource/:id', description: 'Partial update' },
-        { method: 'DELETE', path: '/api/v1/data/:resource/:id', description: 'Delete resource' }
-      ],
-      admin: [
-        { method: 'GET', path: '/api/v1/admin', description: 'Admin operations (query param: type)' }
-      ],
-      settings: [
-        { method: 'GET', path: '/api/v1/settings', description: 'Get settings (query param: type)' },
-        { method: 'PUT', path: '/api/v1/settings', description: 'Update settings (query param: type)' },
-        { method: 'POST', path: '/api/v1/settings/action', description: 'Settings actions' }
-      ],
-      compute: [
-        { method: 'POST', path: '/api/v1/compute/formula', description: 'Evaluate formula' },
-        { method: 'POST', path: '/api/v1/compute/batch', description: 'Batch compute' }
-      ],
-      health: [
-        { method: 'GET', path: '/api/v1/health', description: 'Health check' },
-        { method: 'GET', path: '/api/v1/health/ready', description: 'Readiness check' }
-      ]
-    };
+    // 1. Parse SMART_ENDPOINT_STRATEGY_V2.md to extract expected endpoints
+    const strategyFilePath = path.join(__dirname, '..', '..', '..', 'HzmVeriTabaniYolHaritasi', 'SMART_ENDPOINT_STRATEGY_V2.md');
+    
+    let expectedEndpoints = {};
+    
+    if (fs.existsSync(strategyFilePath)) {
+      try {
+        const strategyContent = fs.readFileSync(strategyFilePath, 'utf8');
+        logger.info('✅ Reading SMART_ENDPOINT_STRATEGY_V2.md...');
+        
+        // Parse markdown to extract endpoints
+        // Pattern: #### METHOD /path
+        const endpointRegex = /####\s+(GET|POST|PUT|PATCH|DELETE)\s+(\/[^\s\n]+)/g;
+        const lines = strategyContent.split('\n');
+        
+        let currentCategory = null;
+        const categoryMap = {
+          'Authentication': 'authentication',
+          'API Keys Management': 'api_keys',
+          'Projects': 'projects',
+          'Generic Data': 'generic_data',
+          'Admin Operations': 'admin',
+          'Health': 'health'
+        };
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          
+          // Detect category headers (e.g., "### 1️⃣ Authentication (4 Endpoint - JWT)")
+          const categoryMatch = line.match(/###\s+\d️⃣\s+([^(]+)/);
+          if (categoryMatch) {
+            const categoryName = categoryMatch[1].trim();
+            currentCategory = categoryMap[categoryName] || null;
+            if (currentCategory && !expectedEndpoints[currentCategory]) {
+              expectedEndpoints[currentCategory] = [];
+            }
+          }
+          
+          // Detect endpoint definitions (e.g., "#### POST /api/v1/auth/login")
+          const endpointMatch = line.match(/####\s+(GET|POST|PUT|PATCH|DELETE)\s+(\/[^\s\n]+)/);
+          if (endpointMatch && currentCategory) {
+            const method = endpointMatch[1];
+            const path = endpointMatch[2];
+            
+            // Look for description in the next few lines (after "- **Auth**:" line)
+            let description = '';
+            for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+              const descLine = lines[j];
+              // Stop at next endpoint or major section
+              if (descLine.startsWith('####') || descLine.startsWith('##')) break;
+              
+              // Extract description from various patterns
+              if (descLine.includes('**Use Case:**') || descLine.includes('**Purpose:**')) {
+                const nextLine = lines[j + 1];
+                if (nextLine && nextLine.startsWith('-')) {
+                  description = nextLine.replace(/^-\s*/, '').trim();
+                  break;
+                }
+              }
+            }
+            
+            // Fallback: generate description from path
+            if (!description) {
+              const pathParts = path.split('/').filter(p => p && !p.startsWith(':'));
+              description = pathParts[pathParts.length - 1] || 'Endpoint';
+            }
+            
+            expectedEndpoints[currentCategory].push({
+              method,
+              path,
+              description
+            });
+          }
+        }
+        
+        logger.info(`✅ Parsed ${Object.keys(expectedEndpoints).length} categories from strategy file`);
+      } catch (parseError) {
+        logger.error('Failed to parse SMART_ENDPOINT_STRATEGY_V2.md:', parseError);
+        // Fallback to minimal plan if parsing fails
+        expectedEndpoints = {
+          authentication: [
+            { method: 'POST', path: '/api/v1/auth/register', description: 'User registration' },
+            { method: 'POST', path: '/api/v1/auth/login', description: 'User login' },
+            { method: 'POST', path: '/api/v1/auth/refresh', description: 'Refresh token' },
+            { method: 'GET', path: '/api/v1/auth/me', description: 'Get current user' }
+          ]
+        };
+      }
+    } else {
+      logger.warn('⚠️ SMART_ENDPOINT_STRATEGY_V2.md not found, using fallback plan');
+      // Fallback to minimal plan
+      expectedEndpoints = {
+        authentication: [
+          { method: 'POST', path: '/api/v1/auth/register', description: 'User registration' },
+          { method: 'POST', path: '/api/v1/auth/login', description: 'User login' },
+          { method: 'POST', path: '/api/v1/auth/refresh', description: 'Refresh token' },
+          { method: 'GET', path: '/api/v1/auth/me', description: 'Get current user' }
+        ]
+      };
+    }
     
     // 2. Scan actual backend routes
     const routesDir = path.join(__dirname);
@@ -1492,10 +1559,16 @@ async function getPlanCompliance() {
       
       // Determine prefix from filename
       let prefix = '';
+      let skipApiV1Prefix = false;
+      
       if (file === 'auth.js') prefix = '/auth';
       else if (file === 'api-keys.js') prefix = '/api-keys';
+      else if (file === 'projects.js') prefix = '/projects';
       else if (file === 'protected.js') prefix = '/protected';
-      else if (file === 'health.js') prefix = '/health';
+      else if (file === 'health.js') {
+        prefix = '';
+        skipApiV1Prefix = true; // Health is at root level
+      }
       else if (file === 'settings.js') prefix = '/settings';
       else if (file === 'compute.js') prefix = '/compute';
       else if (file === 'data.js' || file === 'generic-data.js') prefix = '/data';
@@ -1503,7 +1576,13 @@ async function getPlanCompliance() {
       while ((match = routerRegex.exec(content)) !== null) {
         const method = match[1].toUpperCase();
         const routePath = match[2];
-        const fullPath = `/api/v1${prefix}${routePath}`;
+        
+        let fullPath;
+        if (skipApiV1Prefix) {
+          fullPath = `${prefix}${routePath}`;
+        } else {
+          fullPath = `/api/v1${prefix}${routePath}`;
+        }
         
         actualEndpoints.push({
           method,
