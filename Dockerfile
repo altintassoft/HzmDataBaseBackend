@@ -23,6 +23,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/docs ./docs
 
 # Add curl for healthcheck
 RUN apk add --no-cache curl
