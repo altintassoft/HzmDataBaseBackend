@@ -5,8 +5,9 @@ npm-debug.log
 .gitignore
 README.md
 .DS_Store
-*.md
 logs
 *.log
+# Allow docs/*.md files for Plan Compliance Report
+!docs/**/*.md
 
 
