@@ -22,8 +22,8 @@ const path = require('path');
 // ============================================================================
 
 const ROOT_DIR = path.join(__dirname, '..');
-const FRONTEND_DIR = path.join(ROOT_DIR, 'HzmVeriTabaniFrontend');
-const BACKEND_DIR = path.join(ROOT_DIR, 'HzmVeriTabaniBackend');
+const FRONTEND_DIR = path.join(ROOT_DIR, '..', 'HzmVeriTabaniFrontend');
+const BACKEND_DIR = ROOT_DIR;
 const OUTPUT_FILE = path.join(BACKEND_DIR, 'docs/roadmap/DOSYA_ANALIZI.md');
 
 const EXTENSIONS = ['.tsx', '.ts', '.js', '.jsx', '.sql'];
