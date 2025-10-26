@@ -146,6 +146,16 @@ router.get('/database', authenticateJwtOrApiKey, async (req, res) => {
         return res.status(400).json({ error: 'Unsupported type' });
     }
 
+    // Check if result contains an error (for graceful failures like production environment check)
+    if (result.error) {
+      return res.json({
+        success: false,
+        type,
+        timestamp: new Date().toISOString(),
+        ...result
+      });
+    }
+
     res.json({
       success: true,
       type,
