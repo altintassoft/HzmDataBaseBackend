@@ -89,6 +89,7 @@ const startServer = async () => {
       logger.info(`🚀 HZM Platform API running on port ${config.port}`);
       logger.info(`📊 Environment: ${config.nodeEnv}`);
       logger.info(`🔗 Frontend URL: ${config.frontendUrl}`);
+      logger.info(`🕒 Deploy timestamp: 2025-10-26T20:45:00Z - Force Railway rebuild`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
