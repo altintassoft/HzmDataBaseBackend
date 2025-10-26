@@ -10,6 +10,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Copy source code
+# CACHE_BUST: 2025-10-26-20:30
 COPY . .
 
 # ---
