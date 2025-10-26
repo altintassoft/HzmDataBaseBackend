@@ -2233,178 +2233,52 @@ async function getWrongProgress() {
 // ============================================================================
 async function getProjectStructure(target) {
   try {
-    logger.info(`Scanning project structure for: ${target || 'both'}`);
+    logger.info(`Reading file analysis report from DOSYA_ANALIZI.md`);
     
-    // ⚠️ RAILWAY CHECK: This endpoint only works in local development
-    // Railway only has backend code, not frontend
+    // ✅ YENİ STRATEJİ: Dosya sistemi taramak yerine, otomatik oluşturulan MD raporunu oku
+    // Bu rapor GitHub Actions tarafından her push'ta güncellenir
+    // Production'da da çalışır!
+    
+    const reportPath = path.join(__dirname, '../../docs/roadmap/DOSYA_ANALIZI.md');
+    
+    // Check if report exists
+    if (!fs.existsSync(reportPath)) {
+      return {
+        error: 'Report not found',
+        message: 'DOSYA_ANALIZI.md raporu bulunamadı. GitHub Actions workflow\'ünün çalışıp çalışmadığını kontrol edin.',
+        data: null
+      };
+    }
+    
+    // Read the markdown report
+    const markdownContent = fs.readFileSync(reportPath, 'utf8');
+    
+    // Return the markdown content
+    return {
+      type: 'markdown',
+      content: markdownContent,
+      reportPath: 'docs/roadmap/DOSYA_ANALIZI.md',
+      lastUpdated: fs.statSync(reportPath).mtime.toISOString(),
+      note: 'Bu rapor GitHub Actions tarafından otomatik olarak her push\'ta güncellenir.'
+    };
+    
+    // ❌ ESKİ YÖNTEMİ KALDIR: Production'da hata döndürme
+    /*
     const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT;
     
     if (isProduction) {
       return {
         error: 'Not Available in Production',
         message: 'Proje yapısı taraması sadece local development ortamında çalışır. Railway\'de frontend dosyaları bulunmamaktadır.',
-        data: {
-          summary: {
-            totalFiles: 0,
-            totalLines: 0,
-            totalSize: 0,
-            criticalFiles: 0,
-            warningFiles: 0,
-            okFiles: 0
-          },
-          tree: []
-        },
-        productionNote: 'Bu rapor Railway production ortamında kullanılamaz. Local\'de çalıştırın veya GitHub reposunu kullanın.'
+        ...
       };
     }
-    
-    // Determine base directory (go up from backend/src/routes to workspace root)
-    const workspaceRoot = path.join(__dirname, '../../../');
-    
-    let targetDir;
-    if (target === 'frontend') {
-      targetDir = path.join(workspaceRoot, 'HzmVeriTabaniFrontend');
-    } else if (target === 'backend') {
-      targetDir = path.join(workspaceRoot, 'HzmVeriTabaniBackend');
-    } else {
-      return {
-        error: 'Invalid target',
-        message: 'Target must be "frontend" or "backend"',
-        data: null
-      };
-    }
-
-    // Check if directory exists
-    if (!fs.existsSync(targetDir)) {
-      return {
-        error: 'Directory not found',
-        message: `Directory ${targetDir} does not exist. Bu endpoint sadece local development ortamında çalışır.`,
-        data: null
-      };
-    }
-
-    // Recursive directory scanner
-    const scanDirectory = (dir, relativePath = '') => {
-      const items = [];
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-      for (const entry of entries) {
-        // Skip node_modules, .git, dist, build
-        if (['node_modules', '.git', 'dist', 'build', '.next', 'coverage'].includes(entry.name)) {
-          continue;
-        }
-
-        const fullPath = path.join(dir, entry.name);
-        const entryRelativePath = path.join(relativePath, entry.name);
-
-        if (entry.isDirectory()) {
-          const children = scanDirectory(fullPath, entryRelativePath);
-          items.push({
-            type: 'folder',
-            name: entry.name,
-            path: entryRelativePath,
-            children
-          });
-        } else if (entry.name.match(/\.(js|ts|jsx|tsx|sql|json|md)$/)) {
-          // Only scan code files
-          try {
-            const content = fs.readFileSync(fullPath, 'utf8');
-            const lines = content.split('\n').length;
-            const stats = fs.statSync(fullPath);
-
-            // Determine status based on line count (Cursor Kuralları)
-            let status, message;
-            if (lines >= 800) {
-              status = 'urgent';
-              message = '800+ satır - ACİL BÖLÜNMESI GEREKIYOR!';
-            } else if (lines >= 450) {
-              status = 'critical';
-              message = '450+ satır - BÖLÜNMESI GEREKIYOR!';
-            } else if (lines >= 300) {
-              status = 'warning';
-              message = '300+ satır - GÖZDEN GEÇİRİLMELİ';
-            } else {
-              status = 'ok';
-              message = null;
-            }
-
-            items.push({
-              type: 'file',
-              name: entry.name,
-              path: entryRelativePath,
-              lines,
-              size: stats.size,
-              lastModified: stats.mtime.toISOString(),
-              status,
-              message
-            });
-          } catch (err) {
-            logger.warn(`Failed to read file ${fullPath}:`, err.message);
-          }
-        }
-      }
-
-      return items;
-    };
-
-    // Scan the target directory
-    const tree = scanDirectory(targetDir);
-
-    // Calculate summary statistics
-    const calculateStats = (nodes) => {
-      let totalFiles = 0;
-      let totalLines = 0;
-      let totalSize = 0;
-      let criticalFiles = 0;
-      let warningFiles = 0;
-      let okFiles = 0;
-
-      const traverse = (items) => {
-        items.forEach(item => {
-          if (item.type === 'file') {
-            totalFiles++;
-            totalLines += item.lines;
-            totalSize += item.size;
-            if (item.status === 'urgent' || item.status === 'critical') {
-              criticalFiles++;
-            } else if (item.status === 'warning') {
-              warningFiles++;
-            } else {
-              okFiles++;
-            }
-          } else if (item.type === 'folder' && item.children) {
-            traverse(item.children);
-          }
-        });
-      };
-
-      traverse(nodes);
-
-      return {
-        totalFiles,
-        totalLines,
-        totalSize,
-        criticalFiles,
-        warningFiles,
-        okFiles
-      };
-    };
-
-    const summary = calculateStats(tree);
-
-    logger.info(`Structure scan complete for ${target}: ${summary.totalFiles} files, ${summary.totalLines} lines`);
-
-    return {
-      data: {
-        summary,
-        tree
-      }
-    };
+    */
 
   } catch (error) {
-    logger.error('Failed to scan project structure:', error);
+    logger.error('Failed to read DOSYA_ANALIZI.md:', error);
     return {
-      error: 'Failed to scan project structure',
+      error: 'Failed to read report',
       message: error.message,
       data: null
     };
