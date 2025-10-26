@@ -2225,6 +2225,29 @@ async function getProjectStructure(target) {
   try {
     logger.info(`Scanning project structure for: ${target || 'both'}`);
     
+    // ⚠️ RAILWAY CHECK: This endpoint only works in local development
+    // Railway only has backend code, not frontend
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT;
+    
+    if (isProduction) {
+      return {
+        error: 'Not Available in Production',
+        message: 'Proje yapısı taraması sadece local development ortamında çalışır. Railway\'de frontend dosyaları bulunmamaktadır.',
+        data: {
+          summary: {
+            totalFiles: 0,
+            totalLines: 0,
+            totalSize: 0,
+            criticalFiles: 0,
+            warningFiles: 0,
+            okFiles: 0
+          },
+          tree: []
+        },
+        productionNote: 'Bu rapor Railway production ortamında kullanılamaz. Local\'de çalıştırın veya GitHub reposunu kullanın.'
+      };
+    }
+    
     // Determine base directory (go up from backend/src/routes to workspace root)
     const workspaceRoot = path.join(__dirname, '../../../');
     
@@ -2245,7 +2268,7 @@ async function getProjectStructure(target) {
     if (!fs.existsSync(targetDir)) {
       return {
         error: 'Directory not found',
-        message: `Directory ${targetDir} does not exist`,
+        message: `Directory ${targetDir} does not exist. Bu endpoint sadece local development ortamında çalışır.`,
         data: null
       };
     }
