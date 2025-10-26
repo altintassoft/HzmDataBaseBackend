@@ -1293,11 +1293,26 @@ async function getTableComparison() {
       extra: comparison.filter(t => t.status === 'extra').length
     };
     
+    // ✅ Frontend-compatible response format
     return {
-      tables: comparison,
-      stats,
-      expectedTables: expectedArray,
-      actualTables: actualArray
+      summary: {
+        totalExpected: stats.expected,
+        totalActual: stats.actual,
+        matching: stats.match,
+        missing: stats.missing,
+        extra: stats.extra
+      },
+      tables: comparison.map(t => ({
+        schema: t.schema,
+        table: t.tableName,
+        expectedColumns: 0, // Will be enhanced in Phase 2
+        actualColumns: 0,   // Will be enhanced in Phase 2
+        status: t.status === 'match' ? 'matching' : t.status,
+        missingColumns: [],
+        extraColumns: [],
+        details: `Size: ${t.size} | In Code: ${t.inCode} | In Backend: ${t.inBackend}`
+      })),
+      timestamp: new Date().toISOString()
     };
     
   } catch (error) {
@@ -1305,10 +1320,15 @@ async function getTableComparison() {
     return {
       error: 'Failed to generate table comparison',
       message: error.message,
+      summary: {
+        totalExpected: 0,
+        totalActual: 0,
+        matching: 0,
+        missing: 0,
+        extra: 0
+      },
       tables: [],
-      stats: { total: 0, expected: 0, actual: 0, match: 0, missing: 0, extra: 0 },
-      expectedTables: [],
-      actualTables: []
+      timestamp: new Date().toISOString()
     };
   }
 }
