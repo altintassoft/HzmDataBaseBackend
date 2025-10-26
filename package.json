@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "migrate": "node src/scripts/migrate.js",
     "seed": "node src/scripts/seed.js",
+    "analyze": "node scripts/analyze-files.js",
     "test": "jest --detectOpenHandles",
     "test:watch": "jest --watch"
   },

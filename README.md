@@ -87,6 +87,41 @@ npm run migrate
 npm run dev
 ```
 
+## Documentation & Reports
+
+### File Analysis Report
+
+Otomatik dosya analiz sistemi ile kod kalitesini takip edin:
+
+```bash
+# Dosya analiz raporunu oluştur
+npm run analyze
+
+# Veya doğrudan
+node scripts/analyze-files.js
+```
+
+Rapor konumu: `docs/roadmap/DOSYA_ANALIZI.md`
+
+**Özellikler:**
+- ✅ Frontend & Backend tüm dosyaları tarar (.tsx, .ts, .js, .sql)
+- ✅ 5 seviye kategorizasyon (0-300, 301-450, 451-700, 701-900, 900+)
+- ✅ Kritik dosyaları tespit eder
+- ✅ Refactoring öncelik listesi oluşturur
+- ✅ Detaylı istatistikler (toplam satır, ortalama boyut, vb.)
+
+**GitHub Actions:**
+- 🤖 Her `main` branch push'unda otomatik çalışır
+- 📊 Raporu otomatik günceller
+- 🔄 [skip ci] ile sonsuz döngü engellenir
+
+**Eşik Değerleri:**
+- ✅ 0-300 satır: İdeal
+- ⚠️ 301-450 satır: Gözden geçir
+- 🔴 451-700 satır: Bölünmeli
+- 🔴🔴 701-900 satır: Acil
+- 🔴🔴🔴 900+ satır: Kritik
+
 ## Project Structure
 
 ```

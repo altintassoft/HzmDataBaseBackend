@@ -1,0 +1,84 @@
+name: Update Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'migrations/**'
+      - '../HzmVeriTabaniFrontend/src/**'
+
+  workflow_dispatch: # Manuel tetikleme için
+
+jobs:
+  update-file-analysis:
+    name: Update File Analysis Report
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Tüm git geçmişini al
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Checkout Frontend (sibling repo)
+        uses: actions/checkout@v4
+        with:
+          repository: altintassoft/HzmDatabaseFrontend
+          path: ../HzmVeriTabaniFrontend
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Run File Analysis
+        run: |
+          cd ..
+          node HzmVeriTabaniBackend/scripts/analyze-files.js
+          echo "✅ Dosya analizi tamamlandı"
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          cd HzmVeriTabaniBackend
+          if git diff --quiet docs/roadmap/DOSYA_ANALIZI.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  Raporda değişiklik yok"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Rapor güncellendi"
+          fi
+      
+      - name: Commit and Push changes
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          cd HzmVeriTabaniBackend
+          git config user.name "HZM Bot"
+          git config user.email "bot@hzmsoft.com"
+          git add docs/roadmap/DOSYA_ANALIZI.md
+          git commit -m "docs: Auto-update file analysis report [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Summary
+        run: |
+          echo "### 📊 Dosya Analizi Raporu Güncellendi" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Rapor: \`docs/roadmap/DOSYA_ANALIZI.md\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # İstatistikleri çıkar
+          cd HzmVeriTabaniBackend
+          if [ -f "docs/roadmap/DOSYA_ANALIZI.md" ]; then
+            echo "**Frontend:**" >> $GITHUB_STEP_SUMMARY
+            grep -A 5 "### 📈 Genel İstatistikler" docs/roadmap/DOSYA_ANALIZI.md | grep "Toplam" | head -2 >> $GITHUB_STEP_SUMMARY || true
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Backend:**" >> $GITHUB_STEP_SUMMARY
+            grep -A 5 "## ⚙️ BACKEND" docs/roadmap/DOSYA_ANALIZI.md | grep "Toplam" | head -2 >> $GITHUB_STEP_SUMMARY || true
+          fi
+
