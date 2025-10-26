@@ -17,17 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
+      - name: Checkout Backend repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Tüm git geçmişini al
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          path: HzmVeriTabaniBackend
       
-      - name: Checkout Frontend (sibling repo)
+      - name: Checkout Frontend repository
         uses: actions/checkout@v4
         with:
           repository: altintassoft/HzmDatabaseFrontend
-          path: ../HzmVeriTabaniFrontend
+          path: HzmVeriTabaniFrontend
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node.js
@@ -37,7 +37,6 @@ jobs:
       
       - name: Run File Analysis
         run: |
-          cd ..
           node HzmVeriTabaniBackend/scripts/analyze-files.js
           echo "✅ Dosya analizi tamamlandı"
       
