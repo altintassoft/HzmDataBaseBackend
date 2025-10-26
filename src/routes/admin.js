@@ -22,7 +22,7 @@ const router = express.Router();
 // Whitelist - Sadece izin verilen type'lar
 const ALLOWED_TYPES = ['tables', 'schemas', 'table', 'stats', 'users', 'migration-report', 'migrations', 'architecture-compliance', 'table-comparison', 'all-tables-raw', 'endpoint-compliance', 'plan-compliance', 'phase-progress', 'wrong-progress', 'project-structure'];
 const ALLOWED_INCLUDES = ['columns', 'indexes', 'rls', 'data', 'fk', 'constraints', 'tracking'];
-const ALLOWED_SCHEMAS = ['core', 'app', 'cfg', 'ops'];
+const ALLOWED_SCHEMAS = ['public', 'core', 'app', 'cfg', 'ops'];
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
 router.get('/database', authenticateJwtOrApiKey, async (req, res) => {
