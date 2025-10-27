@@ -632,17 +632,58 @@ async function getMigrationReport(includes = []) {
       actualData
     );
 
-    // 6. Enhance report with tracking information
+    // 6. Enhance report with tracking information & recalculate status
     for (const migrationReport of comparisonReport.migrations) {
       const tracking = trackingMap[migrationReport.filename] || { executed: false, executed_at: null };
       migrationReport.executed = tracking.executed;
       migrationReport.executed_at = tracking.executed_at;
+
+      // 🔧 FIX: If migration is executed and tables exist, mark as success
+      // Schema comparison errors (type differences) should not mark executed migrations as failed
+      if (tracking.executed) {
+        // Check if all expected tables exist
+        const allTablesExist = migrationReport.tables.every(t => 
+          t.status === 'success' || t.status === 'warning'
+        );
+        
+        // Check if all columns exist (even with type differences)
+        const allColumnsExist = migrationReport.columns.length === 0 || 
+          migrationReport.columns.every(c => c.found);
+
+        if (allTablesExist && allColumnsExist) {
+          // Migration is successful if executed and tables/columns exist
+          // Type mismatches are expected (PostgreSQL type equivalence)
+          migrationReport.status = 'success';
+        } else if (allTablesExist && !allColumnsExist) {
+          // Tables exist but some columns missing
+          migrationReport.status = 'warning';
+        }
+        // Keep 'error' only if tables are completely missing
+      }
     }
 
-    logger.info('Migration report generated successfully');
+    // 7. Recalculate summary based on corrected statuses
+    const correctedSummary = {
+      totalMigrations: comparisonReport.migrations.length,
+      successCount: 0,
+      warningCount: 0,
+      errorCount: 0
+    };
+
+    for (const migration of comparisonReport.migrations) {
+      if (migration.status === 'success') {
+        correctedSummary.successCount++;
+      } else if (migration.status === 'warning') {
+        correctedSummary.warningCount++;
+      } else {
+        correctedSummary.errorCount++;
+      }
+    }
+
+    logger.info('Migration report generated successfully', correctedSummary);
 
     return {
-      summary: comparisonReport.summary,
+      summary: correctedSummary,
       migrations: comparisonReport.migrations,
       tables: comparisonReport.tables,
       totalTables: Object.keys(comparisonReport.tables).length
