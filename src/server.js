@@ -6,13 +6,16 @@ const { initDatabase } = require('./config/database');
 const { initRedis } = require('./config/redis');
 const runMigrations = require('./scripts/migrate');
 
-// Import routes
+// Import legacy routes
 const healthRoutes = require('./routes/health');
 const authRoutes = require('./routes/auth');
-const projectRoutes = require('./routes/projects');
+const legacyProjectRoutes = require('./routes/projects'); // Legacy - will be deprecated
 const genericDataRoutes = require('./routes/generic-data');
 const adminRoutes = require('./routes/admin');
 const apiKeysRoutes = require('./routes/api-keys');
+
+// Import modular routes (NEW)
+const projectModuleRoutes = require('./modules/projects/project.routes');
 
 // Create Express app
 const app = express();
@@ -34,7 +37,12 @@ app.use((req, res, next) => {
 // Routes
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/projects', projectRoutes);
+
+// Modular routes (NEW - Clean Architecture)
+app.use('/api/v1/projects', projectModuleRoutes);
+
+// Legacy routes (will be migrated to modules)
+// app.use('/api/v1/projects', legacyProjectRoutes); // DISABLED - using module version
 app.use('/api/v1/data', genericDataRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/api-keys', apiKeysRoutes);
