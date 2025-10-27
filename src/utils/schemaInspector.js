@@ -7,10 +7,10 @@ const logger = require('./logger');
 class SchemaInspector {
   /**
    * Get all tables in specified schemas
-   * @param {Array<string>} schemas - Schemas to inspect (default: ['core', 'app', 'cfg', 'ops'])
+   * @param {Array<string>} schemas - Schemas to inspect (default: ['public', 'core', 'app', 'cfg', 'ops'])
    * @returns {Promise<Array>} List of tables with columns
    */
-  static async getAllTables(schemas = ['core', 'app', 'cfg', 'ops']) {
+  static async getAllTables(schemas = ['public', 'core', 'app', 'cfg', 'ops']) {
     try {
       const result = await pool.query(`
         SELECT 
@@ -72,7 +72,7 @@ class SchemaInspector {
    * @param {Array<string>} schemas - Schemas to inspect
    * @returns {Promise<Object>} Object keyed by table full name
    */
-  static async getAllColumns(schemas = ['core', 'app', 'cfg', 'ops']) {
+  static async getAllColumns(schemas = ['public', 'core', 'app', 'cfg', 'ops']) {
     try {
       const result = await pool.query(`
         SELECT 
@@ -119,7 +119,7 @@ class SchemaInspector {
    * @param {Array<string>} schemas - Schemas to inspect
    * @returns {Promise<Object>} Object keyed by table full name
    */
-  static async getAllIndexes(schemas = ['core', 'app', 'cfg', 'ops']) {
+  static async getAllIndexes(schemas = ['public', 'core', 'app', 'cfg', 'ops']) {
     try {
       const result = await pool.query(`
         SELECT
@@ -160,7 +160,7 @@ class SchemaInspector {
    * @param {Array<string>} schemas - Schemas to inspect
    * @returns {Promise<Object>} Object keyed by table full name
    */
-  static async getAllForeignKeys(schemas = ['core', 'app', 'cfg', 'ops']) {
+  static async getAllForeignKeys(schemas = ['public', 'core', 'app', 'cfg', 'ops']) {
     try {
       const result = await pool.query(`
         SELECT
@@ -235,7 +235,7 @@ class SchemaInspector {
    * @param {Array<string>} schemas - Schemas to inspect
    * @returns {Promise<Object>} Complete schema information
    */
-  static async getCompleteSchema(schemas = ['core', 'app', 'cfg', 'ops']) {
+  static async getCompleteSchema(schemas = ['public', 'core', 'app', 'cfg', 'ops']) {
     try {
       const [tables, columns, indexes, foreignKeys] = await Promise.all([
         this.getAllTables(schemas),
