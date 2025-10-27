@@ -252,16 +252,17 @@ Commit: ${commit}
     md += `### ⚠️ DİKKAT (301-450 satır)\n\n*Yok - Harika!* ✅\n\n`;
   }
 
-  // Good files summary
-  md += `### ✅ OLUMLU (0-300 satır)\n\n**${frontendCategorized.good.length} dosya (${Math.round(frontendCategorized.good.length / frontendFiles.length * 100)}%)** - ${frontendCategorized.good.length > frontendFiles.length * 0.9 ? 'Mükemmel! 🎉' : 'İyi!'}\n\n`;
-  
-  const topGood = frontendCategorized.good.sort((a, b) => a.lines - b.lines).slice(0, 5);
-  if (topGood.length > 0) {
-    md += `En kompakt örnekler:\n`;
-    topGood.forEach(f => {
-      md += `- \`${f.name}\`: ${f.lines} satır\n`;
+  // Good files - TÜM DOSYALARI LİSTELE
+  if (frontendCategorized.good.length > 0) {
+    md += `### ✅ OLUMLU (0-300 satır)\n\n`;
+    md += `**${frontendCategorized.good.length} dosya (${Math.round(frontendCategorized.good.length / frontendFiles.length * 100)}%)** - ${frontendCategorized.good.length > frontendFiles.length * 0.9 ? 'Mükemmel! 🎉' : 'İyi!'}\n\n`;
+    md += `| # | Dosya | Satır | Yol | Durum |\n|---|-------|-------|-----|-------|\n`;
+    frontendCategorized.good.sort((a, b) => a.lines - b.lines).forEach((f, i) => {
+      md += `| ${i + 1} | \`${f.name}\` | ${f.lines} | \`${f.path}\` | ✅ İyi |\n`;
     });
     md += '\n';
+  } else {
+    md += `### ✅ OLUMLU (0-300 satır)\n\n*Hiç dosya yok* ⚠️\n\n`;
   }
 
   // ============================================================================
@@ -346,7 +347,18 @@ Commit: ${commit}
     md += `### ⚠️ DİKKAT (301-450 satır)\n\n*Yok - Harika!* ✅\n\n`;
   }
 
-  md += `### ✅ OLUMLU (0-300 satır)\n\n**${backendCategorized.good.length} dosya (${Math.round(backendCategorized.good.length / backendFiles.length * 100)}%)** - ${backendCategorized.good.length > backendFiles.length * 0.9 ? 'Mükemmel! 🎉' : 'İyi!'}\n\n`;
+  // Good files - TÜM DOSYALARI LİSTELE
+  if (backendCategorized.good.length > 0) {
+    md += `### ✅ OLUMLU (0-300 satır)\n\n`;
+    md += `**${backendCategorized.good.length} dosya (${Math.round(backendCategorized.good.length / backendFiles.length * 100)}%)** - ${backendCategorized.good.length > backendFiles.length * 0.9 ? 'Mükemmel! 🎉' : 'İyi!'}\n\n`;
+    md += `| # | Dosya | Satır | Yol | Durum |\n|---|-------|-------|-----|-------|\n`;
+    backendCategorized.good.sort((a, b) => a.lines - b.lines).forEach((f, i) => {
+      md += `| ${i + 1} | \`${f.name}\` | ${f.lines} | \`${f.path}\` | ✅ İyi |\n`;
+    });
+    md += '\n';
+  } else {
+    md += `### ✅ OLUMLU (0-300 satır)\n\n*Hiç dosya yok* ⚠️\n\n`;
+  }
 
   // ============================================================================
   // PRIORITY LIST
