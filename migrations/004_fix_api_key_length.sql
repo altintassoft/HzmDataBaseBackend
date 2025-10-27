@@ -1,2 +1,0 @@
-ALTER TABLE core.users ALTER COLUMN api_key TYPE VARCHAR(100);
-

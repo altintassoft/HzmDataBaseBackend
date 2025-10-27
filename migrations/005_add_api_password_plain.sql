@@ -1,2 +1,0 @@
-ALTER TABLE core.users ADD COLUMN IF NOT EXISTS api_password VARCHAR(100);
-
