@@ -122,6 +122,73 @@ class HardCodeScanner {
   }
   
   /**
+   * Frontend endpoint string'lerini tespit eder
+   * @param {string} content - Dosya içeriği
+   * @returns {Array|null}
+   */
+  static findEndpointStrings(content) {
+    // '/api/v1/...', '/admin/...', '/auth/...' gibi hard-coded endpoint paths
+    const patterns = [
+      /(['"])\/api\/v\d+\/[^'"]+(['"])/g,
+      /(['"])\/admin\/[^'"]+(['"])/g,
+      /(['"])\/auth\/[^'"]+(['"])/g,
+      /(['"])\/data\/[^'"]+(['"])/g,
+      /(['"])\/health[^'"]*(['"])/g,
+      // Query string'li endpoint'ler
+      /(['"])\/[^'"]+\?type=[^'"]+(['"])/g
+    ];
+    
+    const all = [];
+    patterns.forEach(pattern => {
+      const matches = content.match(pattern);
+      if (matches) all.push(...matches);
+    });
+    
+    // Const tanımlamalarını filtrele (ENDPOINTS.AUTH gibi constant'lar hariç)
+    const filtered = all.filter(endpoint => {
+      // Eğer ENDPOINTS. veya API_ENDPOINTS. gibi bir constant'tan geliyorsa hariç tut
+      const endpointIndex = content.indexOf(endpoint);
+      const before = content.substring(Math.max(0, endpointIndex - 50), endpointIndex);
+      return !before.includes('ENDPOINTS') && 
+             !before.includes('API_ROUTES') &&
+             !before.includes('const API_URL');
+    });
+    
+    return filtered.length > 0 ? filtered : null;
+  }
+  
+  /**
+   * Mock data içindeki hard-coded değerleri tespit eder
+   * @param {string} content - Dosya içeriği
+   * @returns {Object|null}
+   */
+  static findMockData(content) {
+    // mock, Mock, MOCK ile başlayan değişkenler
+    const mockVarPattern = /const\s+(mock|Mock|MOCK)\w*\s*[:=]\s*[\[{]/gi;
+    const hasMockData = content.match(mockVarPattern);
+    
+    if (!hasMockData) return null;
+    
+    // Mock data içindeki URL'leri say
+    const urlsInMock = [];
+    let match;
+    const mockVarRegex = /const\s+(mock|Mock|MOCK)\w*\s*[:=]\s*([\s\S]*?)(?=\n(?:const|export|function|class|\})|$)/gi;
+    
+    while ((match = mockVarRegex.exec(content)) !== null) {
+      const mockContent = match[2];
+      // Bu mock içindeki URL'leri bul
+      const urls = mockContent.match(/(https?:\/\/[^\s'"]+|['"]https?:\/\/[^'"]+['"])/g);
+      if (urls) urlsInMock.push(...urls);
+    }
+    
+    return {
+      mockVarCount: hasMockData.length,
+      urlCount: urlsInMock.length,
+      urls: urlsInMock.slice(0, 5) // İlk 5 örnek
+    };
+  }
+  
+  /**
    * String concatenation ile path oluşturma tespit eder
    * @param {string} content - Dosya içeriği
    * @returns {Array|null}
@@ -166,10 +233,12 @@ class HardCodeScanner {
    * @returns {Array|null}
    */
   static findEnvFallbacks(content) {
-    // process.env.VAR || 'value' veya process.env.VAR || 123
+    // process.env.VAR || 'value' veya import.meta.env.VAR || 'value'
     const patterns = [
       /process\.env\.\w+\s*\|\|\s*['"][^'"]+['"]/g,
-      /process\.env\.\w+\s*\|\|\s*\d+/g
+      /process\.env\.\w+\s*\|\|\s*\d+/g,
+      /import\.meta\.env\.\w+\s*\|\|\s*['"][^'"]+['"]/g,
+      /import\.meta\.env\.\w+\s*\|\|\s*\d+/g
     ];
     
     const all = [];
