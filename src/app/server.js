@@ -9,7 +9,6 @@ const runMigrations = require('../scripts/migrate');
 // Import legacy routes
 const healthRoutes = require('../routes.OLD/health');
 const authRoutes = require('../routes.OLD/auth');
-const legacyProjectRoutes = require('../routes.OLD/projects'); // Legacy - will be deprecated
 const genericDataRoutes = require('../routes.OLD/generic-data');
 const adminRoutes = require('../routes.OLD/admin');
 const apiKeysRoutes = require('../routes.OLD/api-keys');
@@ -42,7 +41,6 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/projects', projectModuleRoutes);
 
 // Legacy routes (will be migrated to modules)
-// app.use('/api/v1/projects', legacyProjectRoutes); // DISABLED - using module version
 app.use('/api/v1/data', genericDataRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/api-keys', apiKeysRoutes);

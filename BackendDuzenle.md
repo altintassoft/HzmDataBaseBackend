@@ -8,35 +8,32 @@
 ## 📊 DURUM
 
 ```
-routes.OLD/ (6 dosya, 4003 satır)
+routes.OLD/ (5 dosya, 3747 satır)
 ├── health.js         49 satır  → Server KULLANIYOR ✅
 ├── auth.js          232 satır  → Server KULLANIYOR ✅
 ├── admin.js        2413 satır  → Server KULLANIYOR ✅ KRİTİK!
-├── projects.js      256 satır  → Kullanılmıyor ❌ SİL
-├── api-keys.js      493 satır  → Kullanılmıyor ❌ SİL
-└── generic-data.js  360 satır  → Kullanılmıyor ❌ SİL
+├── api-keys.js      493 satır  → Server KULLANIYOR ✅ (api-key endpoint aktif)
+└── generic-data.js  360 satır  → Server KULLANIYOR ✅ (data endpoint aktif)
+
+✅ SİLİNDİ: projects.js (256 satır) - Modül versiyonu aktif
 ```
 
 ---
 
-## 🚨 PHASE 1: KOLAY SİLME (5 dk)
+## 🚨 PHASE 1: KOLAY SİLME ✅ TAMAMLANDI
 
-**Kullanılmayan 3 dosyayı sil:**
+**✅ SİLİNDİ: projects.js (256 satır)**
 
 ```bash
-# Kontrol: server.js'de kullanılıyor mu?
-grep -E "(projects|api-keys|generic-data)" src/app/server.js
-
-# Kullanılmıyorsa sil:
-rm src/routes.OLD/projects.js
-rm src/routes.OLD/api-keys.js  
-rm src/routes.OLD/generic-data.js
-
-# Git:
-git add -A && git commit -m "refactor: Remove unused routes" && git push
+# server.js'den import kaldırıldı
+# routes.OLD/projects.js silindi
+# Modül versiyonu (modules/projects/) aktif
 ```
 
-**✅ Sonuç:** 1109 satır temizlendi!
+**⚠️ DİĞER DOSYALAR AKTİF KULANIMDA:**
+- `api-keys.js` → `/api/v1/api-keys` endpoint aktif
+- `generic-data.js` → `/api/v1/data` endpoint aktif
+- Bunlar modüllere taşınana kadar SİLİNEMEZ!
 
 ---
 
@@ -160,17 +157,19 @@ git push
 
 ## 📋 CHECKLIST
 
-- [ ] Phase 1: Kolay silme (3 dosya)
+- [x] Phase 1: projects.js silindi ✅
 - [ ] Phase 2: Health (modüle taşı)
 - [ ] Phase 3: Auth (modüle taşı)  
 - [ ] Phase 4: Admin (KRİTİK - modüle taşı)
-- [ ] Phase 5: routes.OLD/ sil
+- [ ] Phase 5: api-keys & generic-data (modüle taşı)
+- [ ] Phase 6: routes.OLD/ sil
 
 ---
 
 ## 🎯 SONUÇ
 
-**Önce:** 6 dosya, 4003 satır  
-**Sonra:** 0 dosya, temiz modüler yapı ✨
+**Başlangıç:** 6 dosya, 4003 satır  
+**Şimdi:** 5 dosya, 3747 satır (projects.js silindi ✅)  
+**Hedef:** 0 dosya, tamamen modüler yapı ✨
 
-**HANGİ PHASE'DEN BAŞLAYALIM?** 👉
+**SONRAKİ PHASE:** Phase 2 (Health) 👉
