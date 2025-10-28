@@ -73,7 +73,7 @@ class AdminController {
       switch (type) {
         case 'tables':
           // Import service dynamically to avoid circular dependencies
-          const TablesInfoService = require('./services/tables-info.service');
+          const TablesInfoService = require('./services/database/tables-info.service');
           result = await TablesInfoService.getTablesInfo(includes);
           break;
 
@@ -85,67 +85,67 @@ class AdminController {
           if (!ALLOWED_SCHEMAS.includes(schema)) {
             return res.status(403).json({ error: 'Schema not allowed', allowed: ALLOWED_SCHEMAS });
           }
-          const SingleTableInfoService = require('./services/single-table-info.service');
+          const SingleTableInfoService = require('./services/database/single-table-info.service');
           result = await SingleTableInfoService.getSingleTableInfo(schema, table, includes, limit, offset, user);
           break;
 
         case 'schemas':
-          const SchemasInfoService = require('./services/schemas-info.service');
+          const SchemasInfoService = require('./services/database/schemas-info.service');
           result = await SchemasInfoService.getSchemasInfo();
           break;
 
         case 'stats':
-          const DatabaseStatsService = require('./services/database-stats.service');
+          const DatabaseStatsService = require('./services/database/database-stats.service');
           result = await DatabaseStatsService.getDatabaseStats();
           break;
 
         case 'users':
-          const UsersInfoService = require('./services/users-info.service');
+          const UsersInfoService = require('./services/database/users-info.service');
           result = await UsersInfoService.getUsersInfo(limit, offset);
           break;
 
         case 'migration-report':
-          const MigrationReportService = require('./services/migration-report.service');
+          const MigrationReportService = require('./services/migrations/migration-report.service');
           result = await MigrationReportService.getMigrationReport(includes);
           break;
 
         case 'migrations':
-          const MigrationsInfoService = require('./services/migrations-info.service');
+          const MigrationsInfoService = require('./services/migrations/migrations-info.service');
           result = await MigrationsInfoService.getMigrationsInfo(includes);
           break;
 
         case 'architecture-compliance':
-          const ArchitectureComplianceService = require('./services/architecture-compliance.service');
+          const ArchitectureComplianceService = require('./services/compliance/architecture-compliance.service');
           result = await ArchitectureComplianceService.getArchitectureCompliance(includes);
           break;
 
         case 'table-comparison':
-          const TableComparisonService = require('./services/table-comparison.service');
+          const TableComparisonService = require('./services/migrations/table-comparison.service');
           result = await TableComparisonService.getTableComparison();
           break;
 
         case 'endpoint-compliance':
-          const EndpointComplianceService = require('./services/endpoint-compliance.service');
+          const EndpointComplianceService = require('./services/compliance/endpoint-compliance.service');
           result = await EndpointComplianceService.getEndpointCompliance();
           break;
 
         case 'plan-compliance':
-          const PlanComplianceService = require('./services/plan-compliance.service');
+          const PlanComplianceService = require('./services/compliance/plan-compliance.service');
           result = await PlanComplianceService.getPlanCompliance();
           break;
 
         case 'phase-progress':
-          const PhaseProgressService = require('./services/phase-progress.service');
+          const PhaseProgressService = require('./services/compliance/phase-progress.service');
           result = await PhaseProgressService.getPhaseProgress();
           break;
 
         case 'wrong-progress':
-          const WrongProgressService = require('./services/wrong-progress.service');
+          const WrongProgressService = require('./services/compliance/wrong-progress.service');
           result = await WrongProgressService.getWrongProgress();
           break;
 
         case 'project-structure':
-          const ProjectStructureService = require('./services/project-structure.service');
+          const ProjectStructureService = require('./services/analysis/project-structure.service');
           result = await ProjectStructureService.getProjectStructure(target);
           break;
 
@@ -157,7 +157,7 @@ class AdminController {
               message: 'Bu endpoint sadece Master Admin içindir.'
             });
           }
-          const AllTablesRawService = require('./services/all-tables-raw.service');
+          const AllTablesRawService = require('./services/database/all-tables-raw.service');
           result = await AllTablesRawService.getAllTablesRaw();
           break;
 
