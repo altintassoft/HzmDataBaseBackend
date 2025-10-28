@@ -1,21 +1,21 @@
 const express = require('express');
 const cors = require('cors');
-const config = require('./core/config');
-const logger = require('./core/logger');
-const { initDatabase } = require('./core/config/database');
-const { initRedis } = require('./core/config/redis');
-const runMigrations = require('./scripts/migrate');
+const config = require('../core/config');
+const logger = require('../core/logger');
+const { initDatabase } = require('../core/config/database');
+const { initRedis } = require('../core/config/redis');
+const runMigrations = require('../scripts/migrate');
 
 // Import legacy routes
-const healthRoutes = require('./routes.OLD/health');
-const authRoutes = require('./routes.OLD/auth');
-const legacyProjectRoutes = require('./routes.OLD/projects'); // Legacy - will be deprecated
-const genericDataRoutes = require('./routes.OLD/generic-data');
-const adminRoutes = require('./routes.OLD/admin');
-const apiKeysRoutes = require('./routes.OLD/api-keys');
+const healthRoutes = require('../routes.OLD/health');
+const authRoutes = require('../routes.OLD/auth');
+const legacyProjectRoutes = require('../routes.OLD/projects'); // Legacy - will be deprecated
+const genericDataRoutes = require('../routes.OLD/generic-data');
+const adminRoutes = require('../routes.OLD/admin');
+const apiKeysRoutes = require('../routes.OLD/api-keys');
 
 // Import modular routes (NEW)
-const projectModuleRoutes = require('./modules/projects/project.routes');
+const projectModuleRoutes = require('../modules/projects/project.routes');
 
 // Create Express app
 const app = express();
