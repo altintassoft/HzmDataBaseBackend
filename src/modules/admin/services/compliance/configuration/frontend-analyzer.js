@@ -62,13 +62,23 @@ class FrontendAnalyzer {
   static async analyzeGitHub() {
     try {
       const scanner = new GitHubScanner();
-      const owner = 'altintassoft';
-      const repo = 'HzmDatabaseFrontend';
+      
+      // GitHub repository bilgisi environment variable'dan al
+      // Format: "owner/repo" veya ayrı ayrı
+      const repoUrl = process.env.GITHUB_FRONTEND_REPO || 'altintassoft/HzmDatabaseFrontend';
+      const [owner, repo] = repoUrl.split('/');
+      
+      if (!owner || !repo) {
+        logger.error('❌ Invalid GITHUB_FRONTEND_REPO format. Expected: owner/repo');
+        return [];
+      }
+      
+      logger.info(`📡 Analyzing frontend from GitHub: ${owner}/${repo}`);
       
       // Repository var mı kontrol et
       const exists = await scanner.repoExists(owner, repo);
       if (!exists) {
-        logger.warn('❌ Frontend repository not found on GitHub');
+        logger.warn(`❌ Frontend repository not found: ${owner}/${repo}`);
         return [];
       }
       
