@@ -6,15 +6,15 @@ const { initDatabase } = require('../core/config/database');
 const { initRedis } = require('../core/config/redis');
 const runMigrations = require('../scripts/migrate');
 
-// Import legacy routes
-const healthRoutes = require('../routes.OLD/health');
+// Import modular routes (NEW - Clean Architecture)
+const healthRoutes = require('../modules/health/health.routes');
+const projectModuleRoutes = require('../modules/projects/project.routes');
+
+// Import legacy routes (will be migrated to modules)
 const authRoutes = require('../routes.OLD/auth');
 const genericDataRoutes = require('../routes.OLD/generic-data');
 const adminRoutes = require('../routes.OLD/admin');
 const apiKeysRoutes = require('../routes.OLD/api-keys');
-
-// Import modular routes (NEW)
-const projectModuleRoutes = require('../modules/projects/project.routes');
 
 // Create Express app
 const app = express();
