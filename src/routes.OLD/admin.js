@@ -2276,7 +2276,7 @@ async function getProjectStructure(target) {
     // Bu rapor GitHub Actions tarafından her push'ta güncellenir
     // Production'da da çalışır!
     
-    const reportPath = path.join(__dirname, '../../docs-new/roadmap/DOSYA_ANALIZI.md');
+    const reportPath = path.join(__dirname, '../../docs/roadmap/DOSYA_ANALIZI.md');
     
     // Check if report exists
     if (!fs.existsSync(reportPath)) {
@@ -2294,7 +2294,7 @@ async function getProjectStructure(target) {
     return {
       type: 'markdown',
       content: markdownContent,
-      reportPath: 'docs-new/roadmap/DOSYA_ANALIZI.md',
+      reportPath: 'docs/roadmap/DOSYA_ANALIZI.md',
       lastUpdated: fs.statSync(reportPath).mtime.toISOString(),
       note: 'Bu rapor GitHub Actions tarafından otomatik olarak her push\'ta güncellenir.'
     };

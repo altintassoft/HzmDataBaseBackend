@@ -27,7 +27,7 @@ const path = require('path');
 const PROJECT_ROOT = path.join(__dirname, '..', '..', '..');
 const FRONTEND_DIR = path.join(PROJECT_ROOT, 'HzmVeriTabaniFrontend');
 const BACKEND_DIR = path.join(PROJECT_ROOT, 'HzmVeriTabaniBackend');
-const OUTPUT_FILE = path.join(BACKEND_DIR, 'docs-new/roadmap/DOSYA_ANALIZI.md');
+const OUTPUT_FILE = path.join(BACKEND_DIR, 'docs/roadmap/DOSYA_ANALIZI.md');
 
 const EXTENSIONS = ['.tsx', '.ts', '.js', '.jsx', '.sql'];
 const IGNORE_DIRS = ['node_modules', 'dist', 'build', '.git', 'coverage', '.next'];
