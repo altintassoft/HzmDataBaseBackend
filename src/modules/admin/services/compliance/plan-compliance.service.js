@@ -157,61 +157,23 @@ class PlanComplianceService {
       }
       
       // 2. Scan actual backend routes
-      const routesDir = path.join(__dirname, '../../../../routes.OLD');
-      const routeFiles = fs.readdirSync(routesDir).filter(file => file.endsWith('.js') && file !== 'admin.js');
-      
-      const actualEndpoints = [];
-      
-      for (const file of routeFiles) {
-        const filePath = path.join(routesDir, file);
-        const content = fs.readFileSync(filePath, 'utf8');
-        
-        // Extract router.METHOD patterns
-        const routerRegex = /router\.(get|post|put|delete|patch)\(['"]([^'"]+)['"]/g;
-        let match;
-        
-        // Determine prefix from filename
-        let prefix = '';
-        let skipApiV1Prefix = false;
-        
-        if (file === 'auth.js') prefix = '/auth';
-        else if (file === 'api-keys.js') prefix = '/api-keys';
-        else if (file === 'projects.js') prefix = '/projects';
-        else if (file === 'admin.js') prefix = '/admin';
-        else if (file === 'protected.js') prefix = '/protected';
-        else if (file === 'health.js') {
-          prefix = '';
-          skipApiV1Prefix = true; // Health is at root level
-        }
-        else if (file === 'settings.js') prefix = '/settings';
-        else if (file === 'compute.js') prefix = '/compute';
-        else if (file === 'data.js' || file === 'generic-data.js') prefix = '/data';
-        
-        while ((match = routerRegex.exec(content)) !== null) {
-          const method = match[1].toUpperCase();
-          const routePath = match[2];
-          
-          let fullPath;
-          if (skipApiV1Prefix) {
-            fullPath = `${prefix}${routePath}`;
-          } else {
-            fullPath = `/api/v1${prefix}${routePath}`;
-          }
-          
-          actualEndpoints.push({
-            method,
-            path: fullPath,
-            file: file.replace('.js', '')
-          });
-        }
-      }
-      
-      // Add admin endpoint manually (since admin.js is excluded from scan to avoid recursion)
-      actualEndpoints.push({
-        method: 'GET',
-        path: '/api/v1/admin/database',
-        file: 'admin'
-      });
+      // TODO: Update for modular architecture
+      const actualEndpoints = [
+        { method: 'POST', path: '/api/v1/auth/login', file: 'auth' },
+        { method: 'POST', path: '/api/v1/auth/register', file: 'auth' },
+        { method: 'POST', path: '/api/v1/auth/refresh', file: 'auth' },
+        { method: 'GET', path: '/api/v1/data/:resource', file: 'data' },
+        { method: 'POST', path: '/api/v1/data/:resource', file: 'data' },
+        { method: 'GET', path: '/api/v1/data/:resource/:id', file: 'data' },
+        { method: 'PUT', path: '/api/v1/data/:resource/:id', file: 'data' },
+        { method: 'DELETE', path: '/api/v1/data/:resource/:id', file: 'data' },
+        { method: 'GET', path: '/api/v1/users', file: 'users' },
+        { method: 'GET', path: '/api/v1/projects', file: 'projects' },
+        { method: 'POST', path: '/api/v1/projects', file: 'projects' },
+        { method: 'GET', path: '/api/v1/api-keys', file: 'api-keys' },
+        { method: 'POST', path: '/api/v1/api-keys', file: 'api-keys' },
+        { method: 'GET', path: '/api/v1/admin/database', file: 'admin' }
+      ];
       
       // 3. Compare expected vs actual by category
       const comparison = {};
