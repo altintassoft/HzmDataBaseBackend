@@ -494,16 +494,25 @@ Commit: ${commit}
 function main() {
   console.log('📊 HZM Dosya Analiz Scripti Başlatılıyor...\n');
   
-  // Analyze Frontend
-  console.log('🎨 Frontend analiz ediliyor...');
-  const frontendFiles = analyzeDirectory(path.join(FRONTEND_DIR, 'src'), 'Frontend/src');
-  const frontendCategorized = categorizeFiles(frontendFiles);
-  const frontendStats = calculateStats(frontendFiles);
+  // Analyze Frontend (skip if not exists - Railway environment)
+  let frontendFiles = [];
+  let frontendCategorized = { critical: [], urgent: [], refactor: [], attention: [], good: [] };
+  let frontendStats = { good: 0, attention: 0, refactor: 0, urgent: 0, critical: 0, total: 0 };
   
-  console.log(`   ✅ ${frontendFiles.length} dosya tarandı`);
-  console.log(`   📊 Toplam: ${frontendStats.total.toLocaleString()} satır`);
-  console.log(`   🔴🔴🔴 Kritik: ${frontendCategorized.critical.length} dosya`);
-  console.log(`   🔴 Refactor: ${frontendCategorized.refactor.length + frontendCategorized.urgent.length} dosya`);
+  const frontendSrcDir = path.join(FRONTEND_DIR, 'src');
+  if (fs.existsSync(frontendSrcDir)) {
+    console.log('🎨 Frontend analiz ediliyor...');
+    frontendFiles = analyzeDirectory(frontendSrcDir, 'Frontend/src');
+    frontendCategorized = categorizeFiles(frontendFiles);
+    frontendStats = calculateStats(frontendFiles);
+    
+    console.log(`   ✅ ${frontendFiles.length} dosya tarandı`);
+    console.log(`   📊 Toplam: ${frontendStats.total.toLocaleString()} satır`);
+    console.log(`   🔴🔴🔴 Kritik: ${frontendCategorized.critical.length} dosya`);
+    console.log(`   🔴 Refactor: ${frontendCategorized.refactor.length + frontendCategorized.urgent.length} dosya`);
+  } else {
+    console.log('⚠️  Frontend dizini bulunamadı (Railway ortamı), atlanıyor...');
+  }
   
   // Analyze Backend
   console.log('\n⚙️  Backend analiz ediliyor...');
@@ -522,14 +531,19 @@ function main() {
   console.log('\n📝 Markdown rapor oluşturuluyor...');
   const markdown = generateMarkdown(frontendFiles, allBackendFiles);
   
-  // Write to file
-  const outputDir = path.dirname(OUTPUT_FILE);
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
+  // Write to file (with permission handling for Railway)
+  try {
+    const outputDir = path.dirname(OUTPUT_FILE);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(OUTPUT_FILE, markdown, 'utf8');
+    console.log(`   ✅ Rapor kaydedildi: ${OUTPUT_FILE}`);
+  } catch (writeError) {
+    console.error(`   ⚠️  Dosya yazma hatası (Railway izin kısıtlaması): ${writeError.message}`);
+    console.log(`   ℹ️  Rapor oluşturuldu ancak dosyaya yazılamadı (Railway ortamı).`);
   }
-  
-  fs.writeFileSync(OUTPUT_FILE, markdown, 'utf8');
-  console.log(`   ✅ Rapor kaydedildi: ${OUTPUT_FILE}`);
   
   // Summary
   const totalCritical = frontendCategorized.critical.length + backendCategorized.critical.length;
