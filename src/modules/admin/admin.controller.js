@@ -151,7 +151,7 @@ class AdminController {
           break;
 
         case 'configuration-compliance':
-          const ConfigurationComplianceService = require('./services/compliance/configuration-compliance.service');
+          const ConfigurationComplianceService = require('./services/compliance/configuration');
           result = await ConfigurationComplianceService.getFullCompliance();
           break;
 
