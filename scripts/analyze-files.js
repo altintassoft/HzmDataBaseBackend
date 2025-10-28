@@ -21,12 +21,15 @@ const path = require('path');
 // CONFIGURATION
 // ============================================================================
 
-// Script location: HzmVeriTabaniBackend/scripts/analyze-files.js
+// Script location: HzmVeriTabaniBackend/scripts/analyze-files.js (or src/scripts/ in Railway)
 // __dirname = HzmVeriTabaniBackend/scripts/
-// Need to go up 2 levels to reach project root
-const PROJECT_ROOT = path.join(__dirname, '..', '..');
+// Need to handle both local and Railway environments
+const isRailway = __dirname.includes('/app/src/scripts');
+const PROJECT_ROOT = isRailway 
+  ? path.join(__dirname, '..', '..', '..') // Railway: /app/src/scripts → /app
+  : path.join(__dirname, '..', '..'); // Local: scripts/ → project root
 const FRONTEND_DIR = path.join(PROJECT_ROOT, 'HzmVeriTabaniFrontend');
-const BACKEND_DIR = path.join(PROJECT_ROOT, 'HzmVeriTabaniBackend');
+const BACKEND_DIR = path.join(PROJECT_ROOT, isRailway ? '' : 'HzmVeriTabaniBackend');
 const OUTPUT_FILE = path.join(BACKEND_DIR, 'docs-new/roadmap/DOSYA_ANALIZI.md');
 
 const EXTENSIONS = ['.tsx', '.ts', '.js', '.jsx', '.sql'];

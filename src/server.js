@@ -4,7 +4,7 @@ const config = require('./core/config');
 const logger = require('./core/logger');
 const { initDatabase } = require('./core/config/database');
 const { initRedis } = require('./core/config/redis');
-const runMigrations = require('../scripts/migrate');
+const runMigrations = require('./scripts/migrate'); // Railway'de postinstall ile kopyalanır
 
 // Import legacy routes
 const healthRoutes = require('./routes.OLD/health');

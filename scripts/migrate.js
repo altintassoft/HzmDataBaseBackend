@@ -1,10 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { pool } = require('../src/core/config/database');
-const logger = require('../src/core/logger');
+const { pool } = require('../core/config/database');
+const logger = require('../core/logger');
 
-const MIGRATIONS_DIR = path.join(__dirname, '../migrations');
+const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
 /**
  * Calculate SHA-256 checksum of file content
