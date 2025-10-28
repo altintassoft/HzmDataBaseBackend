@@ -5,7 +5,7 @@ const path = require('path');
 
 // Allowed schemas for security
 const ALLOWED_SCHEMAS = ['public', 'core', 'app', 'cfg', 'ops'];
-const MIGRATIONS_DIR = path.join(__dirname, '../../../../migrations');
+const MIGRATIONS_DIR = path.join(__dirname, '../../../../../migrations');
 
 /**
  * Table Comparison Service

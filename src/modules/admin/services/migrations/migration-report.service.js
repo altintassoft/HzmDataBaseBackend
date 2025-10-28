@@ -6,7 +6,7 @@ const MigrationParser = require('../../../../core/database/migrationParser');
 const SchemaInspector = require('../../../../core/database/schemaInspector');
 const MigrationComparator = require('../../../../core/database/migrationComparator');
 
-const MIGRATIONS_DIR = path.join(__dirname, '../../../../migrations');
+const MIGRATIONS_DIR = path.join(__dirname, '../../../../../migrations');
 
 /**
  * Migration Report Service
