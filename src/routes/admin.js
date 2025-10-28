@@ -2347,13 +2347,34 @@ router.post('/analyze-files', authenticateJwtOrApiKey, async (req, res) => {
     
     const scriptPath = path.join(__dirname, '../../scripts/analyze-files.js');
     
+    // 🐛 DEBUG: Log paths
+    logger.info('📂 __dirname:', __dirname);
+    logger.info('📄 scriptPath:', scriptPath);
+    logger.info('📁 Script exists?', fs.existsSync(scriptPath));
+    
     // Check if script exists
     if (!fs.existsSync(scriptPath)) {
+      // Try alternative paths
+      const altPath1 = path.join(process.cwd(), 'scripts/analyze-files.js');
+      const altPath2 = path.join(__dirname, '../../../scripts/analyze-files.js');
+      
+      logger.warn('⚠️  Trying alternative paths...');
+      logger.info('Alt path 1:', altPath1, fs.existsSync(altPath1));
+      logger.info('Alt path 2:', altPath2, fs.existsSync(altPath2));
+      
       return res.status(404).json({
         success: false,
         error: 'Script not found',
         message: 'analyze-files.js script bulunamadı.',
-        scriptPath
+        scriptPath,
+        __dirname,
+        cwd: process.cwd(),
+        altPaths: {
+          path1: altPath1,
+          exists1: fs.existsSync(altPath1),
+          path2: altPath2,
+          exists2: fs.existsSync(altPath2)
+        }
       });
     }
     
