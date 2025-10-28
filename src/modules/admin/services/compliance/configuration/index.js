@@ -26,8 +26,13 @@ class ConfigurationComplianceService {
     try {
       logger.info('🔍 Starting configuration compliance analysis...');
       
-      // Backend root path'i belirle
+      // Backend root path'i belirle - process.cwd() kullan (Railway uyumlu)
+      // __dirname: .../src/modules/admin/services/compliance/configuration
+      // ../../../../..: .../HzmVeriTabaniBackend (6 level up)
       const srcPath = path.join(__dirname, '../../../../..');
+      
+      logger.info(`📂 Backend root path: ${srcPath}`);
+      logger.info(`📂 Source directory: ${path.join(srcPath, 'src')}`);
       
       // Backend ve Frontend analizlerini paralel çalıştır
       const [backend, frontend] = await Promise.all([
@@ -36,8 +41,10 @@ class ConfigurationComplianceService {
       ]);
       
       logger.info('✅ Configuration compliance analysis completed');
+      logger.info(`📊 Backend rules: ${backend.length}, Frontend rules: ${frontend.length}`);
       
       return {
+        success: true,
         backend,
         frontend,
         generatedAt: new Date().toISOString()

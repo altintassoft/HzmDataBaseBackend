@@ -11,7 +11,10 @@ class Rule01HardCode {
     const violations = [];
     const backendSrc = path.join(srcPath, 'src');
     
+    let filesScanned = 0;
+    
     FileScanner.scanJSFiles(backendSrc, (file, content) => {
+      filesScanned++;
       // Deep relative paths (../../../ ve üzeri)
       const deepPaths = HardCodeScanner.findDeepPaths(content);
       if (deepPaths) {
@@ -47,10 +50,12 @@ class Rule01HardCode {
     const score = RuleFormatter.calculateScoreFromViolations(totalViolations, 3);
     const durum = RuleFormatter.getDurumByViolations(totalViolations, 10, 15);
     
+    console.log(`[Rule-01] Scanned ${filesScanned} files, found ${totalViolations} violations in ${violations.length} files`);
+    
     return RuleFormatter.createRule(
       1, 'I', '1. Hard-Code Yasağı',
       durum, score,
-      `${totalViolations} hard-code bulundu (${violations.length} dosyada).`,
+      `${totalViolations} hard-code bulundu (${violations.length} dosyada tarandı: ${filesScanned}).`,
       violations.slice(0, 10),
       totalViolations > 0 ? 'Module aliases (@core, @modules) ve environment variables kullanın.' : ''
     );
