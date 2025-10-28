@@ -12,7 +12,7 @@ class Rule01HardCode {
     const backendSrc = path.join(srcPath, 'src');
     
     FileScanner.scanJSFiles(backendSrc, (file, content) => {
-      // Deep relative paths
+      // Deep relative paths (../../../ ve üzeri)
       const deepPaths = HardCodeScanner.findDeepPaths(content);
       if (deepPaths) {
         violations.push({ file, type: 'deep_path', count: deepPaths.length, examples: deepPaths.slice(0, 2) });
@@ -28,6 +28,18 @@ class Rule01HardCode {
       const tables = HardCodeScanner.findHardCodedTables(content);
       if (tables) {
         violations.push({ file, type: 'hard_table', count: tables.matches.length, examples: tables.matches.slice(0, 2) });
+      }
+      
+      // Environment variable fallbacks (process.env.VAR || default)
+      const envFallbacks = HardCodeScanner.findEnvFallbacks(content);
+      if (envFallbacks) {
+        violations.push({ file, type: 'env_fallback', count: envFallbacks.length, examples: envFallbacks.slice(0, 2) });
+      }
+      
+      // Hard-coded file paths (docs/, migrations/, routes.OLD/)
+      const paths = HardCodeScanner.findHardCodedPaths(content);
+      if (paths) {
+        violations.push({ file, type: 'hard_path', count: paths.length, examples: paths.slice(0, 2) });
       }
     });
     

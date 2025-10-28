@@ -5,12 +5,20 @@
 class HardCodeScanner {
   
   /**
-   * Deep relative paths tespit eder (../../../../)
+   * Deep relative paths tespit eder (../../../ ve üzeri)
    * @param {string} content - Dosya içeriği
    * @returns {Array|null}
    */
   static findDeepPaths(content) {
-    return content.match(/require\(['"](\.\.\/){4,}[^'"]+['"]\)/g);
+    // 3+ level relative paths
+    const requirePaths = content.match(/require\(['"](\.\.\/){3,}[^'"]+['"]\)/g);
+    const importPaths = content.match(/from\s+['"](\.\.\/){3,}[^'"]+['"]/g);
+    
+    const all = [];
+    if (requirePaths) all.push(...requirePaths);
+    if (importPaths) all.push(...importPaths);
+    
+    return all.length > 0 ? all : null;
   }
   
   /**
@@ -150,6 +158,58 @@ class HardCodeScanner {
     if (!content.includes('password') && !content.includes('token')) return false;
     if (content.includes('***') || content.includes('mask')) return false;
     return true;
+  }
+  
+  /**
+   * Environment variable fallbacks tespit eder
+   * @param {string} content - Dosya içeriği
+   * @returns {Array|null}
+   */
+  static findEnvFallbacks(content) {
+    // process.env.VAR || 'value' veya process.env.VAR || 123
+    const patterns = [
+      /process\.env\.\w+\s*\|\|\s*['"][^'"]+['"]/g,
+      /process\.env\.\w+\s*\|\|\s*\d+/g
+    ];
+    
+    const all = [];
+    patterns.forEach(pattern => {
+      const matches = content.match(pattern);
+      if (matches) all.push(...matches);
+    });
+    
+    return all.length > 0 ? all : null;
+  }
+  
+  /**
+   * Hard-coded file/directory paths tespit eder
+   * @param {string} content - Dosya içeriği
+   * @returns {Array|null}
+   */
+  static findHardCodedPaths(content) {
+    // docs/, migrations/, routes.OLD/, gibi hard-coded paths
+    const patterns = [
+      /(['"])(docs\/[^'"]+|migrations\/[^'"]+|routes\.OLD\/[^'"]+|scripts\/[^'"]+)(['"])/g,
+      // path.join içinde hard-coded klasör isimleri
+      /path\.join\([^)]*['"](?:docs|migrations|routes\.OLD|scripts)['"]/g
+    ];
+    
+    const all = [];
+    patterns.forEach(pattern => {
+      const matches = content.match(pattern);
+      if (matches) {
+        // Test dosyalarını ve yorumları filtrele
+        const filtered = matches.filter(m => {
+          const lower = m.toLowerCase();
+          return !lower.includes('test') && 
+                 !lower.includes('spec') && 
+                 !content.substring(Math.max(0, content.indexOf(m) - 5), content.indexOf(m)).includes('//');
+        });
+        if (filtered.length > 0) all.push(...filtered);
+      }
+    });
+    
+    return all.length > 0 ? all : null;
   }
 }
 
