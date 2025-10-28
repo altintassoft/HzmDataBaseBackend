@@ -2322,5 +2322,71 @@ async function getProjectStructure(target) {
   }
 }
 
+// ============================================================================
+// 🔄 FILE ANALYSIS TRIGGER - Run analyze-files.js script
+// ============================================================================
+router.post('/analyze-files', authenticateJwtOrApiKey, async (req, res) => {
+  try {
+    const user = req.user;
+    
+    // 🔒 ADMIN ONLY
+    if (!user.role || !['admin', 'master_admin'].includes(user.role)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'Bu endpoint sadece Admin ve Master Admin içindir.',
+        requiredRole: ['admin', 'master_admin'],
+        yourRole: user.role || 'user'
+      });
+    }
+    
+    logger.info('🔄 Starting file analysis script...');
+    
+    const { exec } = require('child_process');
+    const path = require('path');
+    
+    const scriptPath = path.join(__dirname, '../../scripts/analyze-files.js');
+    
+    // Check if script exists
+    if (!fs.existsSync(scriptPath)) {
+      return res.status(404).json({
+        success: false,
+        error: 'Script not found',
+        message: 'analyze-files.js script bulunamadı.',
+        scriptPath
+      });
+    }
+    
+    // Run script in background
+    exec(`node ${scriptPath}`, (error, stdout, stderr) => {
+      if (error) {
+        logger.error('❌ File analysis failed:', error);
+        return;
+      }
+      
+      logger.info('✅ File analysis completed:', stdout);
+      
+      if (stderr) {
+        logger.warn('⚠️  File analysis warnings:', stderr);
+      }
+    });
+    
+    // Return immediately (script runs in background)
+    res.json({
+      success: true,
+      message: 'Dosya analizi başlatıldı. DOSYA_ANALIZI.md dosyası birkaç saniye içinde güncellenecek.',
+      scriptPath,
+      note: 'Script arka planda çalışıyor. Rapor sayfasını 5-10 saniye sonra yenileyebilirsiniz.'
+    });
+    
+  } catch (error) {
+    logger.error('Failed to run file analysis:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
 

@@ -99,6 +99,75 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 router.post('/login', authController.login);
 ```
 
+---
+
+## Admin Endpoints
+
+### 🔄 Auto File Analysis
+
+**Endpoint:** `POST /api/v1/admin/analyze-files`
+
+**Description:** Triggers backend script to analyze frontend/backend file structure and updates `DOSYA_ANALIZI.md` report.
+
+**Auth:** Admin or Master Admin only (JWT or API Key)
+
+**Implementation:**
+
+```javascript
+// Backend: src/routes/admin.js
+router.post('/analyze-files', authenticateJwtOrApiKey, async (req, res) => {
+  // 🔒 ADMIN ONLY
+  if (!['admin', 'master_admin'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
+  // Run script in background
+  exec(`node scripts/analyze-files.js`, (error, stdout, stderr) => {
+    if (error) {
+      logger.error('❌ File analysis failed:', error);
+      return;
+    }
+    logger.info('✅ File analysis completed:', stdout);
+  });
+  
+  res.json({
+    success: true,
+    message: 'Dosya analizi başlatıldı. DOSYA_ANALIZI.md birkaç saniye içinde güncellenecek.',
+    note: 'Script arka planda çalışıyor.'
+  });
+});
+```
+
+**Frontend Usage:**
+
+```typescript
+// src/pages/admin/reports/tabs/ProjectStructureReportTab.tsx
+const runAnalysis = async () => {
+  setLoading(true);
+  
+  try {
+    const data = await api.post('/admin/analyze-files');
+    
+    if (data.success) {
+      // Wait 3 seconds for script to complete, then fetch updated report
+      setTimeout(async () => {
+        await fetchReport();
+      }, 3000);
+    }
+  } catch (err) {
+    setError('Analiz çalıştırılamadı');
+  }
+};
+```
+
+**Benefits:**
+- ✅ Automatic file structure analysis
+- ✅ No manual script execution needed
+- ✅ Frontend reports always up-to-date
+- ✅ Works on Railway (production)
+
+---
+
 **[Ana Sayfa](../README.md)**
 
 
