@@ -60,7 +60,43 @@ class HardCodeScanner {
    */
   static findHardCodedURLs(content, filePath = '') {
     if (filePath.includes('test')) return null;
-    return content.match(/(['"])(https?:\/\/localhost|http:\/\/127\.0\.0\.1|http:\/\/192\.168\.)/g);
+    
+    // Çok daha kapsamlı URL detection
+    // 1. Localhost ve local IPs
+    // 2. Production domains (railway, netlify, vercel, heroku)
+    // 3. Social media URLs (facebook, instagram, twitter, linkedin)
+    // 4. Generic https:// URLs (placeholder değilse)
+    
+    const patterns = [
+      // Local URLs
+      /(['"])(https?:\/\/)?(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?(['"])/g,
+      // Production platforms
+      /(['"])(https?:\/\/)?[a-zA-Z0-9-]+\.(railway\.app|netlify\.app|vercel\.app|herokuapp\.com)([\/\w\-._~:?#[\]@!$&'()*+,;=]*)?(['"])/g,
+      // Social media (non-placeholder)
+      /(['"])(https?:\/\/)?(www\.)?(facebook|instagram|twitter|linkedin|youtube|tiktok)\.com\/[a-zA-Z0-9_-]+(['"])/g,
+      // API endpoints with production names
+      /(['"])(https?:\/\/)?api\.[a-zA-Z0-9-]+\.(com|net|org|io)([\/\w\-._~:?#[\]@!$&'()*+,;=]*)?(['"])/g
+    ];
+    
+    const allMatches = [];
+    patterns.forEach(pattern => {
+      const matches = content.match(pattern);
+      if (matches) {
+        allMatches.push(...matches);
+      }
+    });
+    
+    // Placeholder ve example URL'leri filtrele
+    const filtered = allMatches.filter(url => {
+      const lower = url.toLowerCase();
+      return !lower.includes('example.com') && 
+             !lower.includes('your') && 
+             !lower.includes('placeholder') &&
+             !lower.includes('import.meta.env') &&
+             !lower.includes('process.env');
+    });
+    
+    return filtered.length > 0 ? filtered : null;
   }
   
   /**

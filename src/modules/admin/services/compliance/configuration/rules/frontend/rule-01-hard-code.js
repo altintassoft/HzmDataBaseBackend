@@ -49,8 +49,20 @@ class FrontendRule01HardCode {
       const filtered = scanner.filterIgnored(tree);
       const tsFiles = scanner.filterTSFiles(filtered).filter(f => f.path.startsWith('src/'));
       
-      // Sample 10 files for quick analysis
-      const sampled = tsFiles.slice(0, Math.min(10, tsFiles.length));
+      // Kritik dosyaları önceliklendir + random sample
+      const criticalFiles = [
+        'src/services/api.ts',
+        'src/App.tsx',
+        'src/config.ts',
+        'src/constants.ts',
+        'src/utils/api.ts'
+      ];
+      
+      const critical = tsFiles.filter(f => criticalFiles.some(cf => f.path.endsWith(cf)));
+      const others = tsFiles.filter(f => !criticalFiles.some(cf => f.path.endsWith(cf)));
+      
+      // Kritik dosyalar + 15 random dosya
+      const sampled = [...critical, ...others.slice(0, 15)];
       const violations = [];
       
       for (const file of sampled) {
