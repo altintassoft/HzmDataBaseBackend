@@ -81,7 +81,7 @@ class ProjectStructureService {
         // Fallback: return error message
         return {
           type: 'markdown',
-          content: `# ⚠️ Dosya Analizi Yapılamadı\n\n## Hata:\n\\`\\`\\`\n${execError.message}\n\\`\\`\\`\n\n## Çözüm:\n\n1. "Analiz Çalıştır" butonuna tıklayın\n2. 5-10 saniye bekleyin\n3. Sayfayı yenileyin`,
+          content: `# ⚠️ Dosya Analizi Yapılamadı\n\n## Hata:\n\`\`\`\n${execError.message}\n\`\`\`\n\n## Çözüm:\n\n1. "Analiz Çalıştır" butonuna tıklayın\n2. 5-10 saniye bekleyin\n3. Sayfayı yenileyin`,
           reportPath: 'Error',
           lastUpdated: new Date().toISOString(),
           note: 'Analysis failed'
