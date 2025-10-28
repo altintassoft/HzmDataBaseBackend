@@ -37,6 +37,51 @@ class FrontendRule01HardCode {
       totalViolations > 0 ? 'URL\'ler ve asset path\'leri constants dosyasından gelsin.' : ''
     );
   }
+  
+  /**
+   * GitHub API ile analiz
+   */
+  static async analyzeGitHub(githubContext) {
+    const { scanner, owner, repo } = githubContext;
+    
+    try {
+      const tree = await scanner.getRepoTree(owner, repo);
+      const filtered = scanner.filterIgnored(tree);
+      const tsFiles = scanner.filterTSFiles(filtered).filter(f => f.path.startsWith('src/'));
+      
+      // Sample 10 files for quick analysis
+      const sampled = tsFiles.slice(0, Math.min(10, tsFiles.length));
+      const violations = [];
+      
+      for (const file of sampled) {
+        try {
+          const content = await scanner.getFileContent(owner, repo, file.path);
+          
+          const urls = HardCodeScanner.findHardCodedURLs(content, file.path);
+          if (urls) violations.push({ file: file.path, type: 'hard_url', count: urls.length });
+          
+          const assets = HardCodeScanner.findHardCodedAssetPaths(content);
+          if (assets) violations.push({ file: file.path, type: 'hard_asset', count: assets.length });
+        } catch (err) {
+          // Skip dosya okuma hatası
+        }
+      }
+      
+      const totalViolations = violations.reduce((sum, v) => sum + v.count, 0);
+      const score = RuleFormatter.calculateScoreFromViolations(totalViolations, 5);
+      const durum = RuleFormatter.getDurumByViolations(totalViolations, 5, 10);
+      
+      return RuleFormatter.createRule(
+        1, 'I', '1. Hard-Code Yasağı',
+        durum, score,
+        `${totalViolations} hard-code bulundu (${sampled.length} dosya tarandı).`,
+        violations.slice(0, 5),
+        totalViolations > 0 ? 'URL\'ler ve asset path\'leri constants dosyasından gelsin.' : ''
+      );
+    } catch (error) {
+      return RuleFormatter.createRule(1, 'I', '1. Hard-Code Yasağı', 'uyumsuz', 0, 'GitHub tarama hatası');
+    }
+  }
 }
 
 module.exports = FrontendRule01HardCode;

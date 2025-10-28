@@ -21,6 +21,28 @@ class FrontendRule15CodeQuality {
       score < 100 ? 'ESLint ve Prettier yapılandırın.' : ''
     );
   }
+  
+  static async analyzeGitHub(githubContext) {
+    const { scanner, owner, repo } = githubContext;
+    try {
+      const tree = await scanner.getRepoTree(owner, repo);
+      const hasESLint = tree.some(f => f.path === 'eslint.config.js' || f.path === '.eslintrc.js');
+      const hasPrettier = tree.some(f => f.path === '.prettierrc');
+      
+      const score = (hasESLint ? 60 : 0) + (hasPrettier ? 40 : 0);
+      const durum = RuleFormatter.getDurumByScore(score);
+      
+      return RuleFormatter.createRule(
+        15, 'V', '15. Kod Kalitesi',
+        durum, score,
+        `ESLint: ${hasESLint ? '✓' : '✗'}, Prettier: ${hasPrettier ? '✓' : '✗'}`,
+        { hasESLint, hasPrettier },
+        score < 100 ? 'ESLint ve Prettier yapılandırın.' : ''
+      );
+    } catch (error) {
+      return RuleFormatter.createRule(15, 'V', '15. Kod Kalitesi', 'uyumsuz', 0, 'GitHub tarama hatası');
+    }
+  }
 }
 
 module.exports = FrontendRule15CodeQuality;

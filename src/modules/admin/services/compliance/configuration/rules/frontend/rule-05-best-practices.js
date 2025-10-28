@@ -21,6 +21,27 @@ class FrontendRule05BestPractices {
       score < 100 ? 'ESLint ve TypeScript ekleyin.' : ''
     );
   }
+  
+  /**
+   * GitHub API ile analiz
+   */
+  static async analyzeGitHub(githubContext) {
+    const { packageJson } = githubContext;
+    
+    const hasESLint = DependencyScanner.hasESLint(packageJson);
+    const hasTypeScript = DependencyScanner.hasTypeScript(packageJson);
+    
+    const score = (hasESLint ? 50 : 0) + (hasTypeScript ? 50 : 0);
+    const durum = RuleFormatter.getDurumByScore(score);
+    
+    return RuleFormatter.createRule(
+      5, 'I', '5. Best Practices',
+      durum, score,
+      `ESLint: ${hasESLint ? '✓' : '✗'}, TypeScript: ${hasTypeScript ? '✓' : '✗'}`,
+      { hasESLint, hasTypeScript },
+      score < 100 ? 'ESLint ve TypeScript ekleyin.' : ''
+    );
+  }
 }
 
 module.exports = FrontendRule05BestPractices;
