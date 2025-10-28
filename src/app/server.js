@@ -11,10 +11,8 @@ const healthRoutes = require('../modules/health/health.routes');
 const authRoutes = require('../modules/auth/auth.routes');
 const projectModuleRoutes = require('../modules/projects/project.routes');
 const adminRoutes = require('../modules/admin/admin.routes'); // ✅ MIGRATED!
-
-// Import legacy routes (will be migrated to modules)
-const genericDataRoutes = require('../routes.OLD/generic-data');
 const apiKeysRoutes = require('../modules/api-keys/api-keys.routes'); // ✅ MIGRATED!
+const dataRoutes = require('../modules/data/data.routes'); // ✅ MIGRATED!
 
 // Create Express app
 const app = express();
@@ -37,11 +35,9 @@ app.use((req, res, next) => {
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 
-// Modular routes (NEW - Clean Architecture)
+// Modular routes (Clean Architecture) ✅
 app.use('/api/v1/projects', projectModuleRoutes);
-
-// Legacy routes (will be migrated to modules)
-app.use('/api/v1/data', genericDataRoutes);
+app.use('/api/v1/data', dataRoutes); // ✅ MIGRATED from routes.OLD/generic-data.js
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/api-keys', apiKeysRoutes);
 

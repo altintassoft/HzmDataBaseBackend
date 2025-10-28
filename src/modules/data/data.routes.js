@@ -1,6 +1,6 @@
 const express = require('express');
 const DataController = require('./data.controller');
-const { authenticateApiKey } = require('../../shared/middleware/auth');
+const { authenticateApiKey } = require('../../middleware/auth');
 
 const router = express.Router();
 
@@ -8,27 +8,28 @@ const router = express.Router();
  * Generic Data Operations Routes
  * Base: /api/v1/data
  * 
+ * Migrated from routes.OLD/generic-data.js
  * Smart endpoint strategy - one endpoint for all resources
  */
 
 // All routes require API Key authentication
-router.use(authenticateApiKey);
+// (Applied in controller level for better error handling)
 
-// Generic CRUD operations
-router.get('/:resource', DataController.list);
-router.post('/:resource', DataController.create);
-router.get('/:resource/:id', DataController.getById);
-router.put('/:resource/:id', DataController.update);
-router.delete('/:resource/:id', DataController.delete);
+// Generic CRUD operations (ORDER MATTERS!)
+// More specific routes first, then generic ones
+router.post('/:resource/batch', authenticateApiKey, DataController.batchCreate);
+router.put('/:resource/batch', authenticateApiKey, DataController.batchUpdate);
+router.delete('/:resource/batch', authenticateApiKey, DataController.batchDelete);
+router.post('/:resource/search', authenticateApiKey, DataController.search);
+router.get('/:resource/count', authenticateApiKey, DataController.count);
 
-// Batch operations
-router.post('/:resource/batch', DataController.batchCreate);
-router.put('/:resource/batch', DataController.batchUpdate);
-router.delete('/:resource/batch', DataController.batchDelete);
-
-// Search and filter
-router.post('/:resource/search', DataController.search);
-router.get('/:resource/count', DataController.count);
+// Single resource operations
+router.get('/:resource', authenticateApiKey, DataController.list);
+router.post('/:resource', authenticateApiKey, DataController.create);
+router.get('/:resource/:id', authenticateApiKey, DataController.getById);
+router.put('/:resource/:id', authenticateApiKey, DataController.update);
+router.patch('/:resource/:id', authenticateApiKey, DataController.update); // Same as PUT for now
+router.delete('/:resource/:id', authenticateApiKey, DataController.delete);
 
 module.exports = router;
 
