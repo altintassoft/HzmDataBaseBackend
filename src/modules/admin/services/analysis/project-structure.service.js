@@ -42,7 +42,7 @@ class ProjectStructureService {
       logger.info('Generating fresh file analysis report...');
       
       try {
-        const scriptPath = path.join(__dirname, '../../../scripts/analyze-files.js');
+        const scriptPath = path.join(__dirname, '../../../../scripts/analyze-files.js');
         
         // Run script and capture output directly (don't write to file on Railway)
         const stdout = execSync(`node ${scriptPath}`, {
