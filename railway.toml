@@ -1,0 +1,19 @@
+# Railway Deployment Configuration
+# https://docs.railway.app/deploy/railway-toml-file
+
+[build]
+  # Use package.json scripts for building
+  builder = "NIXPACKS"
+
+[deploy]
+  # Start command - use package.json "start" script
+  startCommand = "npm start"
+  # Alternative: startCommand = "node src/app/server.js"
+  
+  # Restart policy
+  restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 10
+
+[env]
+  # Environment variables are managed in Railway dashboard
+
