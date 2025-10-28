@@ -1,4 +1,5 @@
 const logger = require('../../core/logger');
+const SyncAnalysisService = require('./services/compliance/sync-analysis.service');
 
 /**
  * Admin Controller
@@ -192,6 +193,55 @@ class AdminController {
 
     } catch (error) {
       logger.error('Admin database endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/admin/sync-analysis
+   * Synchronize ANALIZ.md with Configuration Compliance
+   * 
+   * Updates ANALIZ.md table with real-time compliance data
+   */
+  static async syncAnalysis(req, res) {
+    try {
+      const user = req.user;
+
+      // Admin only
+      if (!user.role || !['admin', 'master_admin'].includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          message: 'Bu endpoint sadece Admin ve Master Admin içindir.',
+          requiredRole: ['admin', 'master_admin'],
+          yourRole: user.role || 'user'
+        });
+      }
+
+      logger.info('🔄 Starting ANALIZ.md synchronization...');
+
+      // Run synchronization
+      const result = await SyncAnalysisService.syncAnalysis();
+
+      if (result.success) {
+        return res.json({
+          success: true,
+          message: result.message,
+          updatedFeatures: result.updatedFeatures,
+          timestamp: result.timestamp
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: result.error,
+          timestamp: result.timestamp
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to sync ANALIZ.md:', error);
       res.status(500).json({
         success: false,
         error: error.message

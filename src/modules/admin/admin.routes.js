@@ -28,6 +28,17 @@ const router = express.Router();
 router.get('/database', authenticateJwtOrApiKey, AdminController.getDatabaseInfo);
 
 /**
+ * ANALIZ.md Synchronization
+ * POST /api/v1/admin/sync-analysis
+ * 
+ * Synchronizes ANALIZ.md with Configuration Compliance report
+ * Updates Roadmap vs Code matrix with real-time data
+ * 
+ * Auth: Admin or Master Admin only
+ */
+router.post('/sync-analysis', authenticateJwtOrApiKey, AdminController.syncAnalysis);
+
+/**
  * File Analysis Trigger
  * POST /api/v1/admin/analyze-files
  * 
