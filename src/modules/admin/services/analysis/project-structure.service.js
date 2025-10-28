@@ -20,7 +20,7 @@ class ProjectStructureService {
       // Bu rapor GitHub Actions tarafından her push'ta güncellenir
       // Production'da da çalışır!
       
-      const reportPath = path.join(__dirname, '../../../../docs/roadmap/DOSYA_ANALIZI.md');
+      const reportPath = path.join(__dirname, '../../../../../docs/roadmap/DOSYA_ANALIZI.md');
       
       // Check if report exists
       if (!fs.existsSync(reportPath)) {

@@ -16,7 +16,7 @@ class PlanComplianceService {
       logger.info('📊 Generating Plan Compliance Report...');
       
       // 1. Parse SMART_ENDPOINT_STRATEGY_V2.md to extract expected endpoints
-      const strategyFilePath = path.join(__dirname, '../../../../docs/roadmap/SMART_ENDPOINT_STRATEGY_V2.md');
+      const strategyFilePath = path.join(__dirname, '../../../../../docs/roadmap/SMART_ENDPOINT_STRATEGY_V2.md');
       
       let expectedEndpoints = {};
       
