@@ -22,7 +22,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: config.cors.origin,
+  origin: config.cors.origins,
   credentials: true
 }));
 app.use(express.json());
