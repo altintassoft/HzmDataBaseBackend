@@ -1,5 +1,5 @@
 const { pool } = require('../config/database');
-const logger = require('./logger');
+const logger = require('../logger');
 
 /**
  * Inspect actual database schema from PostgreSQL

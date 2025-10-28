@@ -1,6 +1,6 @@
 const express = require('express');
-const { pool } = require('../config/database');
-const logger = require('../utils/logger');
+const { pool } = require('../core/config/database');
+const logger = require('../core/logger');
 const { authenticateApiKey } = require('../middleware/auth');
 
 const router = express.Router();

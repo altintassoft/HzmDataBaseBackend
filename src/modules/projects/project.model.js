@@ -1,5 +1,5 @@
-const { pool } = require('../../config/database');
-const logger = require('../../utils/logger');
+const { pool } = require('../../core/config/database');
+const logger = require('../../core/logger');
 
 /**
  * Project Model - Database Access Layer

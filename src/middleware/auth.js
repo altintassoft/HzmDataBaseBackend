@@ -1,7 +1,7 @@
-const { pool } = require('../config/database');
-const logger = require('../utils/logger');
+const { pool } = require('../core/config/database');
+const logger = require('../core/logger');
 const jwt = require('jsonwebtoken');
-const config = require('../config');
+const config = require('../core/config');
 
 // ============================================================================
 // 🔐 AUTHENTICATION MIDDLEWARE

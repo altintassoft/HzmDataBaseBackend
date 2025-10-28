@@ -1,5 +1,5 @@
 const AuthService = require('./auth.service');
-const logger = require('../../shared/utils/logger');
+const logger = require('../../core/logger');
 
 /**
  * Authentication Controller

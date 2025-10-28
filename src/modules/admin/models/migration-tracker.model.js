@@ -1,5 +1,5 @@
-const pool = require('../../../shared/config/database');
-const logger = require('../../../shared/utils/logger');
+const pool = require('../../../core/config/database');
+const logger = require('../../../core/logger');
 
 /**
  * Migration Tracker Model

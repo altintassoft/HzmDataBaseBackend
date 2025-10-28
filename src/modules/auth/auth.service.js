@@ -1,5 +1,5 @@
 const AuthModel = require('./auth.model');
-const logger = require('../../shared/utils/logger');
+const logger = require('../../core/logger');
 
 /**
  * Authentication Service

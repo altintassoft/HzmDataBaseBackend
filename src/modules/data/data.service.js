@@ -1,7 +1,7 @@
 const DataModel = require('./data.model');
 const QueryBuilder = require('./utils/query-builder');
 const Validator = require('./utils/validator');
-const logger = require('../../shared/utils/logger');
+const logger = require('../../core/logger');
 
 /**
  * Data Service

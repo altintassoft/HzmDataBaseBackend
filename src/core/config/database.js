@@ -1,6 +1,6 @@
 const { Pool } = require('pg');
 const config = require('./index');
-const logger = require('../utils/logger');
+const logger = require('../logger');
 
 // PostgreSQL connection pool
 const pool = new Pool({

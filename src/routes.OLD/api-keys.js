@@ -1,8 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const { pool } = require('../config/database');
-const logger = require('../utils/logger');
+const { pool } = require('../core/config/database');
+const logger = require('../core/logger');
 
 const router = express.Router();
 

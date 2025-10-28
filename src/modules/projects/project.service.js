@@ -1,5 +1,5 @@
 const ProjectModel = require('./project.model');
-const logger = require('../../utils/logger');
+const logger = require('../../core/logger');
 
 /**
  * Project Service - Business Logic Layer

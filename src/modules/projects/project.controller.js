@@ -1,5 +1,5 @@
 const ProjectService = require('./project.service');
-const logger = require('../../utils/logger');
+const logger = require('../../core/logger');
 
 /**
  * Project Controller - HTTP Request/Response Layer

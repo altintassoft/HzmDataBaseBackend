@@ -1,6 +1,6 @@
 const express = require('express');
-const { pool } = require('../config/database');
-const { redis } = require('../config/redis');
+const { pool } = require('../core/config/database');
+const { redis } = require('../core/config/redis');
 
 const router = express.Router();
 

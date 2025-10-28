@@ -1,4 +1,4 @@
-const logger = require('./logger');
+const logger = require('../logger');
 
 /**
  * Compare expected migration schema with actual database schema

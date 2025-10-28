@@ -1,5 +1,5 @@
 const UserService = require('./user.service');
-const logger = require('../../shared/utils/logger');
+const logger = require('../../core/logger');
 
 /**
  * User Controller

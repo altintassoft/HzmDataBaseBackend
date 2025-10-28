@@ -8,7 +8,7 @@ const PlanComplianceService = require('./services/plan-compliance.service');
 const PhaseProgressService = require('./services/phase-progress.service');
 const WrongProgressService = require('./services/wrong-progress.service');
 const ProjectStructureService = require('./services/project-structure.service');
-const logger = require('../../shared/utils/logger');
+const logger = require('../../core/logger');
 
 /**
  * Admin Controller

@@ -1,9 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
-const config = require('../config');
-const logger = require('../utils/logger');
+const { pool } = require('../core/config/database');
+const config = require('../core/config');
+const logger = require('../core/logger');
 
 const router = express.Router();
 

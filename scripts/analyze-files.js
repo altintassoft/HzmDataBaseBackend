@@ -21,13 +21,13 @@ const path = require('path');
 // CONFIGURATION
 // ============================================================================
 
-// Script location: HzmVeriTabaniBackend/src/scripts/analyze-files.js
-// __dirname = HzmVeriTabaniBackend/src/scripts/
-// Need to go up 3 levels to reach project root
-const PROJECT_ROOT = path.join(__dirname, '..', '..', '..');
+// Script location: HzmVeriTabaniBackend/scripts/analyze-files.js
+// __dirname = HzmVeriTabaniBackend/scripts/
+// Need to go up 2 levels to reach project root
+const PROJECT_ROOT = path.join(__dirname, '..', '..');
 const FRONTEND_DIR = path.join(PROJECT_ROOT, 'HzmVeriTabaniFrontend');
 const BACKEND_DIR = path.join(PROJECT_ROOT, 'HzmVeriTabaniBackend');
-const OUTPUT_FILE = path.join(BACKEND_DIR, 'docs/roadmap/DOSYA_ANALIZI.md');
+const OUTPUT_FILE = path.join(BACKEND_DIR, 'docs-new/roadmap/DOSYA_ANALIZI.md');
 
 const EXTENSIONS = ['.tsx', '.ts', '.js', '.jsx', '.sql'];
 const IGNORE_DIRS = ['node_modules', 'dist', 'build', '.git', 'coverage', '.next'];

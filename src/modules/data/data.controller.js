@@ -1,5 +1,5 @@
 const DataService = require('./data.service');
-const logger = require('../../shared/utils/logger');
+const logger = require('../../core/logger');
 
 /**
  * Data Controller

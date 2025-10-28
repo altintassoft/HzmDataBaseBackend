@@ -1,12 +1,12 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { pool } = require('../config/database');
-const logger = require('../utils/logger');
+const { pool } = require('../core/config/database');
+const logger = require('../core/logger');
 const { authenticateJwtOrApiKey } = require('../middleware/auth');
-const MigrationParser = require('../utils/migrationParser');
-const SchemaInspector = require('../utils/schemaInspector');
-const MigrationComparator = require('../utils/migrationComparator');
+const MigrationParser = require('../core/database/migrationParser');
+const SchemaInspector = require('../core/database/schemaInspector');
+const MigrationComparator = require('../core/database/migrationComparator');
 
 const router = express.Router();
 
@@ -783,7 +783,7 @@ async function getArchitectureCompliance(includes = []) {
     const mfaExists = fs.existsSync(path.join(routesDir, 'middleware/mfa.js'));
     
     // Check Redis configuration
-    const config = require('../config');
+    const config = require('../core/config');
     const hasRedis = !!config.redis.url;
     
     // Check if app.set_context function exists (RLS)
@@ -2276,7 +2276,7 @@ async function getProjectStructure(target) {
     // Bu rapor GitHub Actions tarafından her push'ta güncellenir
     // Production'da da çalışır!
     
-    const reportPath = path.join(__dirname, '../../docs/roadmap/DOSYA_ANALIZI.md');
+    const reportPath = path.join(__dirname, '../../docs-new/roadmap/DOSYA_ANALIZI.md');
     
     // Check if report exists
     if (!fs.existsSync(reportPath)) {
@@ -2294,7 +2294,7 @@ async function getProjectStructure(target) {
     return {
       type: 'markdown',
       content: markdownContent,
-      reportPath: 'docs/roadmap/DOSYA_ANALIZI.md',
+      reportPath: 'docs-new/roadmap/DOSYA_ANALIZI.md',
       lastUpdated: fs.statSync(reportPath).mtime.toISOString(),
       note: 'Bu rapor GitHub Actions tarafından otomatik olarak her push\'ta güncellenir.'
     };
@@ -2345,7 +2345,7 @@ router.post('/analyze-files', authenticateJwtOrApiKey, async (req, res) => {
     const { exec } = require('child_process');
     const path = require('path');
     
-    const scriptPath = path.join(__dirname, '../scripts/analyze-files.js');
+    const scriptPath = path.join(__dirname, '../../scripts/analyze-files.js');
     
     // 🐛 DEBUG: Log paths
     logger.info('📂 __dirname:', __dirname);
@@ -2355,8 +2355,8 @@ router.post('/analyze-files', authenticateJwtOrApiKey, async (req, res) => {
     // Check if script exists
     if (!fs.existsSync(scriptPath)) {
       // Try alternative paths
-      const altPath1 = path.join(process.cwd(), 'src/scripts/analyze-files.js');
-      const altPath2 = path.join(__dirname, '../../scripts/analyze-files.js');
+      const altPath1 = path.join(process.cwd(), 'scripts/analyze-files.js');
+      const altPath2 = path.join(__dirname, '../../../scripts/analyze-files.js');
       
       logger.warn('⚠️  Trying alternative paths...');
       logger.info('Alt path 1:', altPath1, fs.existsSync(altPath1));

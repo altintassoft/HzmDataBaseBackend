@@ -1,4 +1,4 @@
-const logger = require('../../../shared/utils/logger');
+const logger = require('../../../core/logger');
 
 /**
  * Migration Report Service
