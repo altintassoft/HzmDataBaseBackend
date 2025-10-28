@@ -16,7 +16,9 @@ class ArchitectureComplianceService {
       logger.info('🏗️ Generating Roadmap vs Code compliance report...');
 
       // ANALIZ.md dosyasını parse et
-      const analysisPath = path.join(__dirname, '../../../../docs/roadmap/ANALIZ.md');
+      // Railway: process.cwd() = /app
+      // Local: process.cwd() = /Users/.../HzmVeriTabaniBackend
+      const analysisPath = path.join(process.cwd(), 'docs/roadmap/ANALIZ.md');
       
       if (!fs.existsSync(analysisPath)) {
         logger.warn('ANALIZ.md not found, returning empty report');
