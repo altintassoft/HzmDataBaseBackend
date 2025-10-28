@@ -8,10 +8,10 @@ const runMigrations = require('../scripts/migrate');
 
 // Import modular routes (NEW - Clean Architecture)
 const healthRoutes = require('../modules/health/health.routes');
+const authRoutes = require('../modules/auth/auth.routes');
 const projectModuleRoutes = require('../modules/projects/project.routes');
 
 // Import legacy routes (will be migrated to modules)
-const authRoutes = require('../routes.OLD/auth');
 const genericDataRoutes = require('../routes.OLD/generic-data');
 const adminRoutes = require('../routes.OLD/admin');
 const apiKeysRoutes = require('../routes.OLD/api-keys');
