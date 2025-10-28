@@ -40,7 +40,8 @@ class AdminController {
         'tables', 'schemas', 'table', 'stats', 'users',
         'migration-report', 'migrations', 'architecture-compliance',
         'table-comparison', 'all-tables-raw', 'endpoint-compliance',
-        'plan-compliance', 'phase-progress', 'wrong-progress', 'project-structure'
+        'plan-compliance', 'phase-progress', 'wrong-progress', 'project-structure',
+        'configuration-compliance'
       ];
 
       if (!type || !ALLOWED_TYPES.includes(type)) {
@@ -55,7 +56,7 @@ class AdminController {
       const includes = include ? include.split(',').filter(i => ALLOWED_INCLUDES.includes(i)) : [];
 
       // Role-based authorization for restricted reports
-      const restrictedReports = ['migration-report', 'migrations', 'architecture-compliance'];
+      const restrictedReports = ['migration-report', 'migrations', 'architecture-compliance', 'configuration-compliance'];
       if (restrictedReports.includes(type)) {
         if (!user.role || !['admin', 'master_admin'].includes(user.role)) {
           return res.status(403).json({
@@ -147,6 +148,11 @@ class AdminController {
         case 'project-structure':
           const ProjectStructureService = require('./services/analysis/project-structure.service');
           result = await ProjectStructureService.getProjectStructure(target);
+          break;
+
+        case 'configuration-compliance':
+          const ConfigurationComplianceService = require('./services/compliance/configuration-compliance.service');
+          result = await ConfigurationComplianceService.getFullCompliance();
           break;
 
         case 'all-tables-raw':
