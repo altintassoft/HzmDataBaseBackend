@@ -14,7 +14,7 @@ const adminRoutes = require('../modules/admin/admin.routes'); // ✅ MIGRATED!
 
 // Import legacy routes (will be migrated to modules)
 const genericDataRoutes = require('../routes.OLD/generic-data');
-const apiKeysRoutes = require('../routes.OLD/api-keys');
+const apiKeysRoutes = require('../modules/api-keys/api-keys.routes'); // ✅ MIGRATED!
 
 // Create Express app
 const app = express();
