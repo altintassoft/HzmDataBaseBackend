@@ -29,8 +29,17 @@ const PROJECT_ROOT = path.join(BACKEND_DIR, '..');
 const FRONTEND_DIR = path.join(PROJECT_ROOT, 'HzmVeriTabaniFrontend');
 const OUTPUT_FILE = path.join(BACKEND_DIR, 'docs/roadmap/DOSYA_ANALIZI.md');
 
-const EXTENSIONS = ['.tsx', '.ts', '.js', '.jsx', '.sql'];
+// Kod dosyaları - satır sayısı analizi yapılacak
+const CODE_EXTENSIONS = ['.tsx', '.ts', '.js', '.jsx', '.sql'];
+
+// Diğer proje dosyaları - sadece listeleme
+const OTHER_EXTENSIONS = ['.md', '.json', '.yml', '.yaml', '.toml', '.sh', '.html', '.css', '.env.example'];
+
+// Tüm taranacak uzantılar
+const EXTENSIONS = [...CODE_EXTENSIONS, ...OTHER_EXTENSIONS];
+
 const IGNORE_DIRS = ['node_modules', 'dist', 'build', '.git', 'coverage', '.next'];
+const IGNORE_FILES = ['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock', '.DS_Store'];
 
 // ============================================================================
 // FILE STATUS HELPER
@@ -59,6 +68,7 @@ function analyzeDirectory(dir, basePath = '') {
         // Ignore hidden files and specific directories
         if (item.startsWith('.') && item !== '.env.example') continue;
         if (IGNORE_DIRS.includes(item)) continue;
+        if (IGNORE_FILES.includes(item)) continue;
         
         const fullPath = path.join(currentPath, item);
         const relPath = path.join(relativePath, item);
@@ -73,7 +83,8 @@ function analyzeDirectory(dir, basePath = '') {
             if (EXTENSIONS.includes(ext)) {
               const content = fs.readFileSync(fullPath, 'utf8');
               const lines = content.split('\n').length;
-              const status = getStatus(lines);
+              const isCodeFile = CODE_EXTENSIONS.includes(ext);
+              const status = isCodeFile ? getStatus(lines) : { emoji: '📄', text: 'CONFIG', priority: 0, category: 'config' };
               
               files.push({
                 name: item,
@@ -83,7 +94,8 @@ function analyzeDirectory(dir, basePath = '') {
                 size: stat.size,
                 ext: ext,
                 modified: stat.mtime,
-                status: status
+                status: status,
+                isCodeFile: isCodeFile
               });
             }
           }
