@@ -247,7 +247,8 @@ class AdminController {
           return;
         }
 
-        logger.info(`✅ File analysis completed: ${stdout.substring(0, 200)}...`);
+        // Don't log the full output - it's too large and gets truncated
+        logger.info(`✅ File analysis completed successfully`);
 
         if (stderr) {
           logger.warn(`⚠️  File analysis warnings: ${stderr}`);

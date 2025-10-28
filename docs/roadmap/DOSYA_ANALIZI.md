@@ -1,6 +1,6 @@
 # 📊 HZM Veri Tabanı - Dosya Analiz Raporu
 
-Son Güncelleme: 2025-10-28 04:48:31 (Otomatik)
+Son Güncelleme: 2025-10-28 17:24:37 (Otomatik)
 Commit: N/A
 
 > **Eşik Değerleri:**
@@ -140,29 +140,27 @@ Commit: N/A
 
 | Metrik | Değer |
 |--------|-------|
-| Toplam Dosya | 66 |
-| Toplam Satır | 9,937 |
-| Ortalama Dosya Boyutu | 151 satır |
-| En Büyük Dosya | 2414 satır 🔴🔴🔴 |
+| Toplam Dosya | 67 |
+| Toplam Satır | 9,641 |
+| Ortalama Dosya Boyutu | 144 satır |
+| En Büyük Dosya | 581 satır 🔴 |
 | En Küçük Dosya | 13 satır |
 
 ### 📊 Dosya Boyutu Dağılımı
 
 | Kategori | Dosya Sayısı | Yüzde | Durum |
 |----------|--------------|-------|-------|
-| ✅ Olumlu (0-300) | 59 | 89% | İyi |
-| ⚠️ Dikkat (301-450) | 4 | 6% | Gözden geçir |
-| 🔴 Bölünmeli (451-700) | 2 | 3% | Refactor gerekli |
+| ✅ Olumlu (0-300) | 58 | 87% | İyi |
+| ⚠️ Dikkat (301-450) | 6 | 9% | Gözden geçir |
+| 🔴 Bölünmeli (451-700) | 3 | 4% | Refactor gerekli |
 | 🔴🔴 Acil (701-900) | 0 | 0% | Yok |
-| 🔴🔴🔴 Kötü (900+) | 1 | 2% | **KRİTİK!** |
+| 🔴🔴🔴 Kötü (900+) | 0 | 0% | Yok |
 
 ---
 
-### 🔴🔴🔴 KÖTÜ DURUM (900+ satır) - **KRİTİK!**
+### 🔴🔴🔴 KÖTÜ DURUM (900+ satır)
 
-| # | Dosya | Satır | Yol | Durum |
-|---|-------|-------|-----|-------|
-| 1 | `admin.js` | 2414 | `Backend/src/routes.OLD/admin.js` | 🚨 **ACİL MÜDAHALE GEREKLİ** |
+*Yok - Harika!* ✅
 
 ### 🔴🔴 ACİL (701-900 satır)
 
@@ -172,10 +170,11 @@ Commit: N/A
 
 | # | Dosya | Satır | Yol | Öneri |
 |---|-------|-------|-----|-------|
-| 1 | `analyze-files.js` | 564 | `Backend/src/scripts/analyze-files.js` | Modüllere bölünmeli |
-| 2 | `api-keys.js` | 494 | `Backend/src/routes.OLD/api-keys.js` | Modüllere bölünmeli |
+| 1 | `analyze-files.js` | 581 | `Backend/src/scripts/analyze-files.js` | Modüllere bölünmeli |
+| 2 | `architecture-compliance.service.js` | 558 | `Backend/src/modules/admin/services/compliance/architecture-compliance.service.js` | Modüllere bölünmeli |
+| 3 | `api-keys.js` | 494 | `Backend/src/routes.OLD/api-keys.js` | Modüllere bölünmeli |
 
-**Toplam: 2 dosya refactor edilmeli**
+**Toplam: 3 dosya refactor edilmeli**
 
 ### ⚠️ DİKKAT (301-450 satır)
 
@@ -185,74 +184,75 @@ Commit: N/A
 | 2 | `auth.js` | 412 | `Backend/src/middleware/auth.js` | İzlenmeli |
 | 3 | `generic-data.js` | 361 | `Backend/src/routes.OLD/generic-data.js` | İzlenmeli |
 | 4 | `migrationParser.js` | 343 | `Backend/src/core/database/migrationParser.js` | İzlenmeli |
+| 5 | `plan-compliance.service.js` | 331 | `Backend/src/modules/admin/services/compliance/plan-compliance.service.js` | İzlenmeli |
+| 6 | `auth.controller.js` | 322 | `Backend/src/modules/auth/auth.controller.js` | İzlenmeli |
 
-**Toplam: 4 dosya gözden geçirilmeli**
+**Toplam: 6 dosya gözden geçirilmeli**
 
 ### ✅ OLUMLU (0-300 satır)
 
-**59 dosya (89%)** - İyi!
+**58 dosya (87%)** - İyi!
 
 | # | Dosya | Satır | Yol | Durum |
 |---|-------|-------|-----|-------|
 | 1 | `003_add_api_keys.sql` | 13 | `Backend/migrations/003_add_api_keys.sql` | ✅ İyi |
-| 2 | `architecture-compliance.service.js` | 17 | `Backend/src/modules/admin/services/architecture-compliance.service.js` | ✅ İyi |
-| 3 | `endpoint-compliance.service.js` | 17 | `Backend/src/modules/admin/services/endpoint-compliance.service.js` | ✅ İyi |
-| 4 | `phase-progress.service.js` | 17 | `Backend/src/modules/admin/services/phase-progress.service.js` | ✅ İyi |
-| 5 | `plan-compliance.service.js` | 17 | `Backend/src/modules/admin/services/plan-compliance.service.js` | ✅ İyi |
-| 6 | `project-structure.service.js` | 17 | `Backend/src/modules/admin/services/project-structure.service.js` | ✅ İyi |
-| 7 | `table-comparison.service.js` | 17 | `Backend/src/modules/admin/services/table-comparison.service.js` | ✅ İyi |
-| 8 | `wrong-progress.service.js` | 17 | `Backend/src/modules/admin/services/wrong-progress.service.js` | ✅ İyi |
-| 9 | `tables-info.service.js` | 20 | `Backend/src/modules/admin/services/tables-info.service.js` | ✅ İyi |
-| 10 | `health.routes.js` | 20 | `Backend/src/modules/health/health.routes.js` | ✅ İyi |
-| 11 | `database-stats.service.js` | 21 | `Backend/src/modules/admin/services/database-stats.service.js` | ✅ İyi |
-| 12 | `migration-report.service.js` | 21 | `Backend/src/modules/admin/services/migration-report.service.js` | ✅ İyi |
-| 13 | `api-key.routes.js` | 24 | `Backend/src/modules/api-keys/api-key.routes.js` | ✅ İyi |
-| 14 | `auth.routes.js` | 25 | `Backend/src/modules/auth/auth.routes.js` | ✅ İyi |
-| 15 | `002_seed_data.sql` | 25 | `Backend/migrations/002_seed_data.sql` | ✅ İyi |
-| 16 | `004_add_migration_checksum.sql` | 25 | `Backend/migrations/004_add_migration_checksum.sql` | ✅ İyi |
-| 17 | `user.routes.js` | 31 | `Backend/src/modules/users/user.routes.js` | ✅ İyi |
-| 18 | `data.routes.js` | 35 | `Backend/src/modules/data/data.routes.js` | ✅ İyi |
-| 19 | `logger.js` | 36 | `Backend/src/shared/utils/logger.js` | ✅ İyi |
-| 20 | `admin.routes.js` | 39 | `Backend/src/modules/admin/admin.routes.js` | ✅ İyi |
-| 21 | `migration-tracker.model.js` | 40 | `Backend/src/modules/admin/models/migration-tracker.model.js` | ✅ İyi |
-| 22 | `database.js` | 41 | `Backend/src/shared/config/database.js` | ✅ İyi |
-| 23 | `validator.js` | 42 | `Backend/src/modules/data/utils/validator.js` | ✅ İyi |
-| 24 | `index.js` | 47 | `Backend/src/core/config/index.js` | ✅ İyi |
-| 25 | `health.js` | 50 | `Backend/src/routes.OLD/health.js` | ✅ İyi |
-| 26 | `query-builder.js` | 51 | `Backend/src/modules/data/utils/query-builder.js` | ✅ İyi |
-| 27 | `index.js` | 55 | `Backend/src/shared/config/index.js` | ✅ İyi |
-| 28 | `database-inspector.model.js` | 58 | `Backend/src/modules/admin/models/database-inspector.model.js` | ✅ İyi |
-| 29 | `api-key.controller.js` | 58 | `Backend/src/modules/api-keys/api-key.controller.js` | ✅ İyi |
-| 30 | `index.js` | 60 | `Backend/src/core/logger/index.js` | ✅ İyi |
-| 31 | `005_create_projects_table.sql` | 64 | `Backend/migrations/005_create_projects_table.sql` | ✅ İyi |
-| 32 | `database.js` | 66 | `Backend/src/core/config/database.js` | ✅ İyi |
-| 33 | `api-key.service.js` | 67 | `Backend/src/modules/api-keys/api-key.service.js` | ✅ İyi |
-| 34 | `health.controller.js` | 76 | `Backend/src/modules/health/health.controller.js` | ✅ İyi |
-| 35 | `api-key.model.js` | 85 | `Backend/src/modules/api-keys/api-key.model.js` | ✅ İyi |
-| 36 | `data.model.js` | 86 | `Backend/src/modules/data/data.model.js` | ✅ İyi |
-| 37 | `006_cleanup_and_create_master_admin.sql` | 86 | `Backend/migrations/006_cleanup_and_create_master_admin.sql` | ✅ İyi |
-| 38 | `project.routes.js` | 90 | `Backend/src/modules/projects/project.routes.js` | ✅ İyi |
-| 39 | `auth.service.js` | 91 | `Backend/src/modules/auth/auth.service.js` | ✅ İyi |
-| 40 | `user.model.js` | 94 | `Backend/src/modules/users/user.model.js` | ✅ İyi |
-| 41 | `user.service.js` | 94 | `Backend/src/modules/users/user.service.js` | ✅ İyi |
-| 42 | `data.service.js` | 95 | `Backend/src/modules/data/data.service.js` | ✅ İyi |
-| 43 | `user.controller.js` | 96 | `Backend/src/modules/users/user.controller.js` | ✅ İyi |
-| 44 | `redis.js` | 104 | `Backend/src/core/config/redis.js` | ✅ İyi |
-| 45 | `admin.controller.js` | 108 | `Backend/src/modules/admin/admin.controller.js` | ✅ İyi |
-| 46 | `data.controller.js` | 114 | `Backend/src/modules/data/data.controller.js` | ✅ İyi |
-| 47 | `auth.model.js` | 116 | `Backend/src/modules/auth/auth.model.js` | ✅ İyi |
-| 48 | `server.js` | 121 | `Backend/src/server.js` | ✅ İyi |
-| 49 | `auth.js` | 121 | `Backend/src/shared/middleware/auth.js` | ✅ İyi |
-| 50 | `001_initial_schema.sql` | 124 | `Backend/migrations/001_initial_schema.sql` | ✅ İyi |
-| 51 | `auth.controller.js` | 132 | `Backend/src/modules/auth/auth.controller.js` | ✅ İyi |
-| 52 | `apiKeyGenerator.js` | 155 | `Backend/src/modules/api-keys/utils/apiKeyGenerator.js` | ✅ İyi |
-| 53 | `project.controller.js` | 209 | `Backend/src/modules/projects/project.controller.js` | ✅ İyi |
-| 54 | `auth.js` | 233 | `Backend/src/routes.OLD/auth.js` | ✅ İyi |
-| 55 | `project.model.js` | 245 | `Backend/src/modules/projects/project.model.js` | ✅ İyi |
-| 56 | `project.service.js` | 249 | `Backend/src/modules/projects/project.service.js` | ✅ İyi |
-| 57 | `projects.js` | 257 | `Backend/src/routes.OLD/projects.js` | ✅ İyi |
-| 58 | `migrate.js` | 276 | `Backend/src/scripts/migrate.js` | ✅ İyi |
-| 59 | `schemaInspector.js` | 295 | `Backend/src/core/database/schemaInspector.js` | ✅ İyi |
+| 2 | `health.routes.js` | 20 | `Backend/src/modules/health/health.routes.js` | ✅ İyi |
+| 3 | `api-key.routes.js` | 24 | `Backend/src/modules/api-keys/api-key.routes.js` | ✅ İyi |
+| 4 | `auth.routes.js` | 25 | `Backend/src/modules/auth/auth.routes.js` | ✅ İyi |
+| 5 | `002_seed_data.sql` | 25 | `Backend/migrations/002_seed_data.sql` | ✅ İyi |
+| 6 | `004_add_migration_checksum.sql` | 25 | `Backend/migrations/004_add_migration_checksum.sql` | ✅ İyi |
+| 7 | `user.routes.js` | 31 | `Backend/src/modules/users/user.routes.js` | ✅ İyi |
+| 8 | `data.routes.js` | 35 | `Backend/src/modules/data/data.routes.js` | ✅ İyi |
+| 9 | `logger.js` | 36 | `Backend/src/shared/utils/logger.js` | ✅ İyi |
+| 10 | `migration-tracker.model.js` | 40 | `Backend/src/modules/admin/models/migration-tracker.model.js` | ✅ İyi |
+| 11 | `schemas-info.service.js` | 40 | `Backend/src/modules/admin/services/database/schemas-info.service.js` | ✅ İyi |
+| 12 | `database.js` | 41 | `Backend/src/shared/config/database.js` | ✅ İyi |
+| 13 | `validator.js` | 42 | `Backend/src/modules/data/utils/validator.js` | ✅ İyi |
+| 14 | `admin.routes.js` | 44 | `Backend/src/modules/admin/admin.routes.js` | ✅ İyi |
+| 15 | `index.js` | 47 | `Backend/src/core/config/index.js` | ✅ İyi |
+| 16 | `all-tables-raw.service.js` | 47 | `Backend/src/modules/admin/services/database/all-tables-raw.service.js` | ✅ İyi |
+| 17 | `users-info.service.js` | 50 | `Backend/src/modules/admin/services/database/users-info.service.js` | ✅ İyi |
+| 18 | `query-builder.js` | 51 | `Backend/src/modules/data/utils/query-builder.js` | ✅ İyi |
+| 19 | `index.js` | 55 | `Backend/src/shared/config/index.js` | ✅ İyi |
+| 20 | `database-inspector.model.js` | 58 | `Backend/src/modules/admin/models/database-inspector.model.js` | ✅ İyi |
+| 21 | `api-key.controller.js` | 58 | `Backend/src/modules/api-keys/api-key.controller.js` | ✅ İyi |
+| 22 | `index.js` | 60 | `Backend/src/core/logger/index.js` | ✅ İyi |
+| 23 | `005_create_projects_table.sql` | 64 | `Backend/migrations/005_create_projects_table.sql` | ✅ İyi |
+| 24 | `database.js` | 66 | `Backend/src/core/config/database.js` | ✅ İyi |
+| 25 | `api-key.service.js` | 67 | `Backend/src/modules/api-keys/api-key.service.js` | ✅ İyi |
+| 26 | `database-stats.service.js` | 72 | `Backend/src/modules/admin/services/database/database-stats.service.js` | ✅ İyi |
+| 27 | `migrations-info.service.js` | 81 | `Backend/src/modules/admin/services/migrations/migrations-info.service.js` | ✅ İyi |
+| 28 | `api-key.model.js` | 85 | `Backend/src/modules/api-keys/api-key.model.js` | ✅ İyi |
+| 29 | `data.model.js` | 86 | `Backend/src/modules/data/data.model.js` | ✅ İyi |
+| 30 | `006_cleanup_and_create_master_admin.sql` | 86 | `Backend/migrations/006_cleanup_and_create_master_admin.sql` | ✅ İyi |
+| 31 | `project.routes.js` | 90 | `Backend/src/modules/projects/project.routes.js` | ✅ İyi |
+| 32 | `auth.service.js` | 91 | `Backend/src/modules/auth/auth.service.js` | ✅ İyi |
+| 33 | `user.model.js` | 94 | `Backend/src/modules/users/user.model.js` | ✅ İyi |
+| 34 | `user.service.js` | 94 | `Backend/src/modules/users/user.service.js` | ✅ İyi |
+| 35 | `data.service.js` | 95 | `Backend/src/modules/data/data.service.js` | ✅ İyi |
+| 36 | `user.controller.js` | 96 | `Backend/src/modules/users/user.controller.js` | ✅ İyi |
+| 37 | `project-structure.service.js` | 103 | `Backend/src/modules/admin/services/analysis/project-structure.service.js` | ✅ İyi |
+| 38 | `health.controller.js` | 103 | `Backend/src/modules/health/health.controller.js` | ✅ İyi |
+| 39 | `redis.js` | 104 | `Backend/src/core/config/redis.js` | ✅ İyi |
+| 40 | `single-table-info.service.js` | 105 | `Backend/src/modules/admin/services/database/single-table-info.service.js` | ✅ İyi |
+| 41 | `data.controller.js` | 114 | `Backend/src/modules/data/data.controller.js` | ✅ İyi |
+| 42 | `auth.model.js` | 116 | `Backend/src/modules/auth/auth.model.js` | ✅ İyi |
+| 43 | `server.js` | 119 | `Backend/src/app/server.js` | ✅ İyi |
+| 44 | `auth.js` | 121 | `Backend/src/shared/middleware/auth.js` | ✅ İyi |
+| 45 | `001_initial_schema.sql` | 124 | `Backend/migrations/001_initial_schema.sql` | ✅ İyi |
+| 46 | `endpoint-compliance.service.js` | 133 | `Backend/src/modules/admin/services/compliance/endpoint-compliance.service.js` | ✅ İyi |
+| 47 | `migration-report.service.js` | 149 | `Backend/src/modules/admin/services/migrations/migration-report.service.js` | ✅ İyi |
+| 48 | `apiKeyGenerator.js` | 155 | `Backend/src/modules/api-keys/utils/apiKeyGenerator.js` | ✅ İyi |
+| 49 | `phase-progress.service.js` | 162 | `Backend/src/modules/admin/services/compliance/phase-progress.service.js` | ✅ İyi |
+| 50 | `table-comparison.service.js` | 162 | `Backend/src/modules/admin/services/migrations/table-comparison.service.js` | ✅ İyi |
+| 51 | `tables-info.service.js` | 185 | `Backend/src/modules/admin/services/database/tables-info.service.js` | ✅ İyi |
+| 52 | `project.controller.js` | 209 | `Backend/src/modules/projects/project.controller.js` | ✅ İyi |
+| 53 | `project.model.js` | 245 | `Backend/src/modules/projects/project.model.js` | ✅ İyi |
+| 54 | `project.service.js` | 249 | `Backend/src/modules/projects/project.service.js` | ✅ İyi |
+| 55 | `wrong-progress.service.js` | 255 | `Backend/src/modules/admin/services/compliance/wrong-progress.service.js` | ✅ İyi |
+| 56 | `migrate.js` | 276 | `Backend/src/scripts/migrate.js` | ✅ İyi |
+| 57 | `admin.controller.js` | 277 | `Backend/src/modules/admin/admin.controller.js` | ✅ İyi |
+| 58 | `schemaInspector.js` | 295 | `Backend/src/core/database/schemaInspector.js` | ✅ İyi |
 
 ---
 
@@ -260,22 +260,17 @@ Commit: N/A
 
 ### 🚨 KRİTİK ÖNCELİK (Bugün yapılmalı)
 
-1. **🔴🔴🔴 admin.js (2414 satır)** - Backend
-   - Yol: `Backend/src/routes.OLD/admin.js`
-   - Durum: KÖTÜ - 900+ satır
-   - Önemi: **Kritik** - Bakım imkansız
-
-2. **🔴🔴🔴 DatabaseContext.tsx (1342 satır)** - Frontend
+1. **🔴🔴🔴 DatabaseContext.tsx (1342 satır)** - Frontend
    - Yol: `Frontend/src/context/DatabaseContext.tsx`
    - Durum: KÖTÜ - 900+ satır
    - Önemi: **Kritik** - Bakım imkansız
 
-3. **🔴🔴🔴 FieldPanel.tsx (1218 satır)** - Frontend
+2. **🔴🔴🔴 FieldPanel.tsx (1218 satır)** - Frontend
    - Yol: `Frontend/src/components/layout/panels/FieldPanel.tsx`
    - Durum: KÖTÜ - 900+ satır
    - Önemi: **Kritik** - Bakım imkansız
 
-4. **🔴🔴🔴 DatabasePricingPage.tsx (1132 satır)** - Frontend
+3. **🔴🔴🔴 DatabasePricingPage.tsx (1132 satır)** - Frontend
    - Yol: `Frontend/src/pages/customer/pricing/DatabasePricingPage.tsx`
    - Durum: KÖTÜ - 900+ satır
    - Önemi: **Kritik** - Bakım imkansız
@@ -294,14 +289,16 @@ Commit: N/A
 
 1. **🔴 DatabaseUsersPage.tsx (697 satır)** - Frontend
 2. **🔴 UpgradePlanPage.tsx (684 satır)** - Frontend
-3. **🔴 analyze-files.js (564 satır)** - Backend
-4. **🔴 ProjectDataPage.tsx (543 satır)** - Frontend
-5. **🔴 ArchitectureComplianceTab.tsx (511 satır)** - Frontend
-6. **🔴 AdLinkModal.tsx (496 satır)** - Frontend
-7. **🔴 api-keys.js (494 satır)** - Backend
-8. **🔴 EndpointComplianceTab.tsx (472 satır)** - Frontend
-9. **🔴 BackendStructureTab.tsx (452 satır)** - Frontend
-10. **🔴 FrontendStructureTab.tsx (452 satır)** - Frontend
+3. **🔴 analyze-files.js (581 satır)** - Backend
+4. **🔴 architecture-compliance.service.js (558 satır)** - Backend
+5. **🔴 ProjectDataPage.tsx (543 satır)** - Frontend
+6. **🔴 ArchitectureComplianceTab.tsx (511 satır)** - Frontend
+7. **🔴 AdLinkModal.tsx (496 satır)** - Frontend
+8. **🔴 api-keys.js (494 satır)** - Backend
+9. **🔴 EndpointComplianceTab.tsx (472 satır)** - Frontend
+10. **🔴 BackendStructureTab.tsx (452 satır)** - Frontend
+
+*...ve 1 dosya daha*
 
 ---
 
@@ -309,11 +306,11 @@ Commit: N/A
 
 | Metrik | Şu An | Hedef | İlerleme | Durum |
 |--------|-------|-------|----------|-------|
-| **900+ satır dosya** | 4 | 0 | 🔴 0% | Kritik |
-| **451+ satır dosya** | 12 | 0 | 🔴 0% | Kötü |
-| **301+ satır dosya** | 16 | <5 | 🔴 0% | Kötü |
+| **900+ satır dosya** | 3 | 0 | 🔴 0% | Kritik |
+| **451+ satır dosya** | 13 | 0 | 🔴 0% | Kötü |
+| **301+ satır dosya** | 18 | <5 | 🔴 0% | Kötü |
 | **Ortalama (Frontend)** | 282 satır | <100 | ⚠️ 0% | Yüksek |
-| **Ortalama (Backend)** | 151 satır | <150 | ⚠️ 0% | Yüksek |
+| **Ortalama (Backend)** | 144 satır | <150 | ✅ 4% | İyi |
 
 ---
 
@@ -335,9 +332,9 @@ Commit: N/A
 
 ## 💡 ÖNERİLER
 
-1. 🚨 **4 kritik dosya için acil eylem planı oluştur**
-2. 🔴 **12 dosya için refactoring sprint planla**
-3. ⚠️ **301-450 satırlık 16 dosyayı haftalık gözden geçir**
+1. 🚨 **3 kritik dosya için acil eylem planı oluştur**
+2. 🔴 **13 dosya için refactoring sprint planla**
+3. ⚠️ **301-450 satırlık 18 dosyayı haftalık gözden geçir**
 - ✅ **Yeni dosya ekleme kuralı koy: Max 300 satır**
 - 🤖 **Otomatik linter kuralı ekle (ESLint/TSLint)**
 - 📊 **Bu raporu haftalık gözden geçir**
