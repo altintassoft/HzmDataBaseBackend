@@ -668,6 +668,913 @@ External analist'in P0→P2 planı **aynen uygulanabilir**. Roadmap ile **%95 uy
 
 ---
 
-**Sonraki Analiz**: TBD (Analiz #2 buraya eklenecek)
+# ANALIZ #2: MODÜL-İÇİ MİMARİ TUTARLILIĞI
+
+**Tarih**: 2025-10-28  
+**Analist**: External Module Review  
+**Kapsam**: `src/modules/` yapı analizi ve katman tutarlılığı
+
+---
+
+## 📋 ÖZET DEĞERLENDİRME
+
+| Metrik | Durum | Puan |
+|--------|-------|------|
+| **Genel Yapı Tutarlılığı** | ⚠️ %80 | 8/10 |
+| **Katman Ayrımı** | ⚠️ Partial | 7/10 |
+| **İsimlendirme** | ❌ Çakışma var | 5/10 |
+| **Dosya Boyutları** | ⚠️ Şişkin | 6/10 |
+| **Policy/RBAC** | ❌ Eksik | 3/10 |
+
+**🚨 KRİTİK**: Yapı temelde doğru **AMA** isimlendirme çakışması ve şişkin controller'lar var!
+
+---
+
+## 🔍 MODÜL MODÜL DETAYLI ANALİZ
+
+### 1. ✅ **admin/** - İyi Yapılandırılmış
+
+**Yapı**:
+```
+admin/
+├── routes/ ✅
+├── controllers/ ✅
+├── models/ ✅
+└── services/
+    ├── compliance/ ⚠️ Çok derin
+    ├── database/ ✅
+    ├── migrations/ ✅
+    └── analysis/ ✅
+```
+
+**Güçlü Yönler**:
+- ✅ Tüm katmanlar mevcut (routes/controller/models/services)
+- ✅ Service katmanı zengin (compliance, database, migrations, analysis)
+- ✅ Modüler organizasyon
+
+**Zayıf Yönler**:
+- 🔴 `services/compliance/architecture-compliance.service.js` (558 satır) - ÇOK UZUN
+- ⚠️ `services/compliance/plan-compliance.service.js` (331 satır) - UZUN
+- ⚠️ `admin.controller.js` (277 satır) - Orta şişkin
+
+**ÖNERİ (P1)**:
+```javascript
+// ❌ ŞU AN:
+services/compliance/architecture-compliance.service.js (558 satır)
+
+// ✅ OLMALI:
+services/compliance/
+├── rules/
+│   ├── rule-architecture.js
+│   ├── rule-endpoint.js
+│   ├── rule-phase.js
+│   └── rule-plan.js
+├── evaluator.js          // Rule'ları çalıştır
+├── reporter.js           // Sonuçları formatla
+└── index.js              // Export
+```
+
+**Action Items**:
+- [ ] `architecture-compliance.service.js` 3'e böl (rules/evaluator/reporter)
+- [ ] `plan-compliance.service.js` helper'lara ayır
+- [ ] `admin.controller.js` handler'lara böl
+
+---
+
+### 2. ⚠️ **data/** - Controller Şişkin
+
+**Yapı**:
+```
+data/
+├── routes/ ✅
+├── controllers/
+│   └── data.controller.js (360 satır) 🔴 ÇOK ŞIŞKIN
+├── services/ ✅
+├── models/ ✅
+└── utils/ ✅
+```
+
+**Güçlü Yönler**:
+- ✅ Temel katmanlar var
+- ✅ `utils/validator.js` ve `utils/query-builder.js` mevcut
+
+**Zayıf Yönler**:
+- 🔴🔴 `data.controller.js` (360 satır) - **CONTROLLER'DA İŞ KURALI VAR!**
+- ❌ `schemas/` yok - Validation dağınık
+- ❌ `policies/` yok - RBAC eksik
+
+**ANALIZ #1 İLE UYUM**: ✅ AYNI BULGU (Controller şişkinliği)
+
+**ÖNERİ (P0)**:
+```javascript
+// ❌ ŞU AN (data.controller.js):
+async function create(req, res) {
+  // Validation burada
+  const errors = validateInput(req.body);
+  if (errors) return res.status(400).json(errors);
+  
+  // İş kuralı burada (YANLIŞ!)
+  const tenant = await getTenant(req.context.tenantId);
+  if (!tenant.active) throw new Error('Inactive tenant');
+  
+  const data = await dataService.create(req.body);
+  res.json(data);
+}
+
+// ✅ OLMALI:
+async function create(req, res, next) {
+  try {
+    // Validation: Schema ile
+    const validated = createDataSchema.parse(req.body);
+    
+    // Policy: Modül-bazlı
+    await policies.canCreate(req.context);
+    
+    // Service: İş kuralı burada
+    const data = await dataService.create(validated, req.context);
+    
+    // Response
+    res.json({ ok: true, data });
+  } catch (e) { next(e); }
+}
+```
+
+**Action Items**:
+- [ ] `data.controller.js` → `data.service.js` iş kuralı taşı
+- [ ] `schemas/data.schema.js` oluştur (zod)
+- [ ] `policies/data.policy.js` oluştur (RBAC)
+- [ ] Controller'ı 100 satır altına indir
+
+---
+
+### 3. ⚠️ **auth/** - Controller Şişkin
+
+**Yapı**:
+```
+auth/
+├── routes/ ✅
+├── controllers/
+│   └── auth.controller.js (322 satır) 🔴 ÇOK ŞIŞKIN
+├── services/ ✅
+└── models/ ✅
+```
+
+**Güçlü Yönler**:
+- ✅ Katmanlar yerinde
+- ✅ JWT/API Key logic service'te
+
+**Zayıf Yönler**:
+- 🔴 `auth.controller.js` (322 satır) - Çok büyük
+- ❌ `schemas/` yok
+- ❌ Rate limiting yok (brute-force riski)
+
+**ANALIZ #1 İLE UYUM**: ✅ AYNI BULGU (Rate limiting eksik)
+
+**ÖNERİ (P0)**:
+```javascript
+// ✅ YAPILMALI:
+auth/
+├── controllers/
+│   ├── login.controller.js        // Giriş
+│   ├── register.controller.js     // Kayıt
+│   ├── refresh.controller.js      // Token yenile
+│   └── verify.controller.js       // Token doğrula
+├── schemas/
+│   ├── login.schema.js
+│   ├── register.schema.js
+│   └── refresh.schema.js
+└── policies/
+    └── rate-limit.policy.js       // Brute-force koruması
+```
+
+**Action Items**:
+- [ ] `auth.controller.js` → 4 handler'a böl
+- [ ] Schema'lar ekle (email/password validation)
+- [ ] Rate limiting ekle (login endpoint'ine)
+
+---
+
+### 4. ✅ **health/** - Mükemmel
+
+**Yapı**:
+```
+health/
+├── routes/ ✅
+└── controllers/ ✅
+```
+
+**Değerlendirme**: ✅ **PERFECT!**
+- Basit ve yalın
+- Model/service gereksiz (stateless)
+- Dosya boyutları ideal
+
+**ÖNERİ**: Ekstra endpoint eklenebilir:
+```javascript
+GET /health        // Basic health
+GET /health/ready  // Kubernetes readiness
+GET /health/live   // Kubernetes liveness
+```
+
+---
+
+### 5. 🚨 **api-keys/** - İSİMLENDİRME KAOSI!
+
+**Yapı**:
+```
+api-keys/
+├── routes/
+│   ├── api-key.routes.js      ❌ TEKİL
+│   └── api-keys.routes.js     ❌ ÇOĞUL
+├── controllers/
+│   ├── api-key.controller.js  ❌ TEKİL
+│   └── api-keys.controller.js ❌ ÇOĞUL
+├── services/ ✅
+├── models/ ✅
+└── utils/ ✅
+```
+
+**🚨 KRİTİK SORUN**: İki farklı naming convention!
+
+**RİSK**:
+- 🔴🔴🔴 Developer hangi dosyayı import edeceğini bilmiyor
+- 🔴🔴 Route çakışması riski (`/api-key` vs `/api-keys`)
+- 🔴 Maintenance zorlaşır
+
+**ÇÖZÜM (P0 - EN ACİL!)**:
+```javascript
+// ✅ ÇOĞUL STANDARDI BENİMSE:
+api-keys/
+├── routes/
+│   └── api-keys.routes.js       // Tek dosya
+├── controllers/
+│   └── api-keys.controller.js   // Tek dosya
+├── services/
+│   ├── master-admin-api-keys.service.js ✅
+│   └── user-api-keys.service.js ✅
+├── models/
+│   └── api-keys.model.js
+└── utils/
+    ├── generators.js ✅
+    └── apiKeyGenerator.js ✅
+
+// ❌ TEKİL DOSYALARI SİL:
+// - api-key.routes.js
+// - api-key.controller.js
+// - api-key.model.js
+// - api-key.service.js
+```
+
+**Action Items (P0 - Bugün)**:
+- [ ] `api-key.*` dosyalarını `api-keys.*` olarak rename et
+- [ ] Tüm import'ları güncelle
+- [ ] Route path'i `/api/v1/api-keys` olarak standardize et
+- [ ] Smoke test yap
+
+---
+
+### 6. ✅ **users/** - İyi Durumda
+
+**Yapı**:
+```
+users/
+├── routes/ ✅
+├── controllers/ ✅ (96 satır)
+├── services/ ✅ (94 satır)
+└── models/ ✅ (94 satır)
+```
+
+**Değerlendirme**: ✅ **İYİ!**
+- Dosya boyutları makul (<100 satır)
+- Katman ayrımı net
+- İsimlendirme tutarlı
+
+**ÖNERİ (P1)**:
+```javascript
+// ✅ EKLENEBILIR:
+users/
+├── schemas/
+│   ├── create-user.schema.js
+│   └── update-user.schema.js
+└── policies/
+    └── users.policy.js  // Tenant + role kontrolü
+```
+
+---
+
+### 7. ✅ **projects/** - İyi Durumda
+
+**Yapı**:
+```
+projects/
+├── routes/ ✅ (90 satır)
+├── controllers/ ✅ (209 satır)
+├── services/ ✅ (249 satır)
+└── models/ ✅ (245 satır)
+```
+
+**Değerlendirme**: ✅ **İYİ!**
+- Katmanlar dengeli
+- Service katmanı zengin
+- İsimlendirme tutarlı
+
+**ÖNERİ (P1)**:
+```javascript
+// ✅ EKLENEBILIR:
+projects/
+├── schemas/
+│   └── project.schema.js
+└── policies/
+    └── project.policy.js  // RBAC: admin/user ayrımı
+```
+
+---
+
+## 🎯 STANDART MODÜL ŞABLONU
+
+### Önerilen Yapı (Tüm Modüller İçin):
+
+```
+modules/
+  {module-name}/
+    routes/
+      {module-name}.routes.js       // express.Router: path → controller
+    controllers/
+      {module-name}.controller.js   // validate → policy → service → response
+    services/
+      {module-name}.service.js      // İş kuralları, transaction, cache
+    models/
+      {module-name}.model.js        // DB erişim (SQL/repo)
+    schemas/
+      {module-name}.schema.js       // zod/yup validation şemaları
+    policies/
+      {module-name}.policy.js       // RBAC + tenant kontrolü
+    utils/                          // (opsiyonel) helper'lar
+    index.js                        // Router export (barrel)
+```
+
+### Örnek: `users` Modülü
+
+#### 1. Route (Minimal)
+```javascript
+// modules/users/routes/users.routes.js
+const express = require('express');
+const ctrl = require('../controllers/users.controller');
+const router = express.Router();
+
+router.get('/',     ctrl.list);
+router.get('/:id',  ctrl.getById);
+router.post('/',    ctrl.create);
+router.patch('/:id', ctrl.update);
+router.delete('/:id', ctrl.remove);
+
+module.exports = router;
+```
+
+#### 2. Controller (İnce)
+```javascript
+// modules/users/controllers/users.controller.js
+const { listSchema, createSchema } = require('../schemas/users.schema');
+const service = require('../services/users.service');
+const policy = require('../policies/users.policy');
+
+async function list(req, res, next) {
+  try {
+    // 1. Validation
+    const input = await listSchema.parseAsync(req.query);
+    
+    // 2. Policy check
+    await policy.canRead(req.context);
+    
+    // 3. Service call
+    const data = await service.list(input, req.context);
+    
+    // 4. Response
+    res.json({ ok: true, data });
+  } catch (e) { 
+    next(e); 
+  }
+}
+
+async function create(req, res, next) {
+  try {
+    const input = await createSchema.parseAsync(req.body);
+    await policy.canCreate(req.context);
+    const data = await service.create(input, req.context);
+    res.json({ ok: true, data });
+  } catch (e) { 
+    next(e); 
+  }
+}
+
+module.exports = { list, create, getById, update, remove };
+```
+
+#### 3. Service (İş Kuralları)
+```javascript
+// modules/users/services/users.service.js
+const model = require('../models/users.model');
+const logger = require('../../../core/logger');
+
+async function list(filters, context) {
+  // İş kuralı: Tenant kontrolü
+  if (!context.tenantId) {
+    throw new Error('Tenant context required');
+  }
+  
+  // Model çağrısı
+  return model.findMany({ 
+    ...filters, 
+    tenant_id: context.tenantId 
+  });
+}
+
+async function create(data, context) {
+  // İş kuralı: Email unique kontrolü
+  const existing = await model.findByEmail(data.email);
+  if (existing) {
+    throw new Error('Email already exists');
+  }
+  
+  // İş kuralı: Tenant limiti
+  const userCount = await model.countByTenant(context.tenantId);
+  const tenantLimit = await getTenantLimit(context.tenantId);
+  if (userCount >= tenantLimit) {
+    throw new Error('User limit exceeded');
+  }
+  
+  // Audit log
+  logger.info('Creating user', { 
+    email: data.email, 
+    tenantId: context.tenantId 
+  });
+  
+  // Model çağrısı
+  return model.create({
+    ...data,
+    tenant_id: context.tenantId,
+    created_by: context.userId
+  });
+}
+
+module.exports = { list, create };
+```
+
+#### 4. Model (DB Erişim)
+```javascript
+// modules/users/models/users.model.js
+const pool = require('../../../core/config/database');
+
+async function findMany(filters) {
+  const { tenant_id, limit = 10, offset = 0 } = filters;
+  
+  const result = await pool.query(`
+    SELECT id, email, name, role, created_at
+    FROM core.users
+    WHERE tenant_id = $1
+    ORDER BY created_at DESC
+    LIMIT $2 OFFSET $3
+  `, [tenant_id, limit, offset]);
+  
+  return result.rows;
+}
+
+async function findByEmail(email) {
+  const result = await pool.query(`
+    SELECT * FROM core.users WHERE email = $1
+  `, [email]);
+  
+  return result.rows[0];
+}
+
+async function create(data) {
+  const result = await pool.query(`
+    INSERT INTO core.users (tenant_id, email, name, role, password_hash, created_by)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `, [data.tenant_id, data.email, data.name, data.role, data.password_hash, data.created_by]);
+  
+  return result.rows[0];
+}
+
+module.exports = { findMany, findByEmail, create };
+```
+
+#### 5. Schema (Validation)
+```javascript
+// modules/users/schemas/users.schema.js
+const { z } = require('zod');
+
+const listSchema = z.object({
+  limit: z.coerce.number().min(1).max(100).default(10),
+  offset: z.coerce.number().min(0).default(0),
+  role: z.enum(['admin', 'user', 'viewer']).optional()
+});
+
+const createSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2).max(100),
+  role: z.enum(['admin', 'user', 'viewer']).default('user'),
+  password: z.string().min(8).max(128)
+});
+
+const updateSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  role: z.enum(['admin', 'user', 'viewer']).optional()
+});
+
+module.exports = { listSchema, createSchema, updateSchema };
+```
+
+#### 6. Policy (RBAC)
+```javascript
+// modules/users/policies/users.policy.js
+const CustomError = require('../../../app/errors/CustomError');
+
+async function canRead(context) {
+  // Auth check
+  if (!context.userId) {
+    throw new CustomError('Unauthenticated', 401, 'UNAUTHENTICATED');
+  }
+  
+  // Tenant check
+  if (!context.tenantId) {
+    throw new CustomError('Tenant context required', 400, 'MISSING_TENANT');
+  }
+  
+  // Role check: Admin can read all, user can read only self
+  if (context.role === 'admin') {
+    return true;
+  }
+  
+  // User can only list users in same tenant
+  return true;
+}
+
+async function canCreate(context) {
+  // Only admins can create users
+  if (context.role !== 'admin') {
+    throw new CustomError('Forbidden: Admin only', 403, 'FORBIDDEN');
+  }
+  
+  return true;
+}
+
+module.exports = { canRead, canCreate };
+```
+
+---
+
+## 🔗 ANALIZ #1 İLE UYUM KARŞILAŞTIRMASI
+
+| Konu | Analiz #1 | Analiz #2 | Uyum | Birleşik Çözüm |
+|------|-----------|-----------|------|----------------|
+| **Controller şişkinliği** | ✅ Tespit | ✅ Tespit | %100 | Service'e taşı |
+| **Validation dağınık** | ✅ P1 | ✅ P0 (schemas/) | %100 | Zod + schemas/ |
+| **Policy/RBAC eksik** | ✅ P0 (tenantGuard) | ✅ P0 (policies/) | %100 | **HYBRID** ⚡ |
+| **api-keys çakışma** | ❌ Tespit edilmedi | ✅ P0 | **YENİ** | Çoğul standardı |
+| **Rate limiting** | ✅ P1 | ✅ Auth'da eksik | %100 | Middleware |
+| **Error handler** | ✅ P0 | ⚠️ Controller'da | %100 | Global handler |
+| **Metrics** | ✅ P1 | ❌ Belirtilmedi | Partial | Prometheus |
+
+### 🎯 HYBRID POLICY YAKLAŞIMI
+
+**Analiz #1**: Global `tenantGuard` middleware (RLS context set)  
+**Analiz #2**: Modül-bazlı `policies/` (Role-based checks)
+
+**✅ İKİSİ DE KULLANILMALI!**
+
+```javascript
+// ✅ BİRLEŞTİRİLMİŞ YAKLAŞIM:
+
+// Global middleware'ler (server.js)
+app.use(requestIdMiddleware);      // Request tracking
+app.use(authMiddleware);           // API Key decode + user lookup
+app.use(tenantGuard);              // RLS context set (Analiz #1)
+app.use(metricsMiddleware);        // Prometheus metrics
+
+// Route-level policy (modül-spesifik)
+router.get('/users', 
+  policies.canRead,                // Role-based check (Analiz #2)
+  controller.list
+);
+
+router.post('/users',
+  policies.canCreate,              // Admin-only check (Analiz #2)
+  controller.create
+);
+```
+
+**AVANTAJLAR**:
+- **Global guard**: RLS garantisi, tenant izolasyonu (Analiz #1)
+- **Modül policy**: Fine-grained RBAC, resource-level control (Analiz #2)
+- **Separation of Concerns**: Infrastructure vs Business logic
+
+---
+
+## 📊 BİRLEŞTİRİLMİŞ TUTARLILIK KONTROL LİSTESİ
+
+### P0 - Kritik (Bugün/Yarın)
+
+#### 1. İsimlendirme & Yapı
+- [ ] `api-keys` modülü: Çoğul standardı (api-key.* → api-keys.*)
+- [ ] Tüm route path'leri `/api/v1/{module-name}` formatında
+- [ ] Duplicate auth/config temizlendi (Analiz #1)
+
+#### 2. Güvenlik & Tenant İzolasyonu
+- [ ] Global `tenantGuard` middleware aktif (Analiz #1)
+- [ ] `req.context.rlsSet = true` doğrulaması var
+- [ ] Her modülde `policies/` klasörü mevcut (Analiz #2)
+- [ ] Policy'ler tenant kontrolü yapıyor
+
+#### 3. Controller İnceliği
+- [ ] `data.controller.js` < 150 satır (service'e taşı)
+- [ ] `auth.controller.js` < 150 satır (handler'lara böl)
+- [ ] `admin.controller.js` < 200 satır
+- [ ] Controller'da sadece: validate → policy → service → response
+
+#### 4. Validation & Error Handling
+- [ ] Her modülde `schemas/` klasörü var
+- [ ] Zod kullanılıyor (listSchema, createSchema, updateSchema)
+- [ ] Global error handler aktif (Analiz #1)
+- [ ] CustomError class kullanılıyor
+
+### P1 - Önemli (Bu Hafta)
+
+#### 5. Service Parçalama
+- [ ] `architecture-compliance.service.js` → rules/evaluator/reporter
+- [ ] `plan-compliance.service.js` helper'lara ayrıldı
+- [ ] Service dosyaları < 300 satır
+
+#### 6. Observability
+- [ ] Metrics middleware tüm route'larda (Analiz #1)
+- [ ] Audit logging aktif (ops.audit_logs)
+- [ ] Rate limiting middleware (`/auth/login` için)
+
+#### 7. Standart Şablon
+- [ ] Her modül: routes/controllers/services/models/schemas/policies
+- [ ] Barrel export (`modules/{name}/index.js`)
+- [ ] README.md her modülde (kullanım örnekleri)
+
+### P2 - Gelişmiş (Bu Ay)
+
+#### 8. Test & Dokümantasyon
+- [ ] Unit test: Service katmanı
+- [ ] Integration test: Route'lar
+- [ ] OpenAPI schema her endpoint için
+- [ ] Policy test suite
+
+#### 9. Advanced
+- [ ] Redis caching (report/analytics modülleri)
+- [ ] Job queue integration (heavy operations)
+- [ ] Webhook support (event-driven)
+
+---
+
+## 🔥 BİRLEŞTİRİLMİŞ P0 ACTION PLAN (7 GÜN)
+
+### Hafta 1: Kritik Güvenlik & Yapı (5 gün)
+
+**Gün 1: İsimlendirme & Config Temizliği**
+```bash
+# Öncelik #1: api-keys çakışması (0.5 gün)
+- [ ] api-key.* dosyalarını api-keys.* olarak rename et
+- [ ] Import'ları güncelle
+- [ ] Route path'i /api/v1/api-keys standardize et
+- [ ] Smoke test
+
+# Öncelik #2: Duplicate temizlik (0.5 gün)
+- [ ] src/shared/middleware/auth.js SİL (Analiz #1)
+- [ ] src/shared/config/* SİL (Analiz #1)
+- [ ] Tüm import'ları src/core/* olarak güncelle
+```
+
+**Gün 2: Tenant Guard & RLS**
+```bash
+# Öncelik #3: Global tenant guard (Analiz #1)
+- [ ] src/app/middleware/tenantGuard.js OLUŞTUR
+- [ ] RLS context set implement et
+- [ ] Tüm route'lara ekle
+- [ ] Integration test: Cross-tenant access denial
+
+# Öncelik #4: RLS context validation
+- [ ] req.context.rlsSet doğrulaması ekle
+- [ ] PostgreSQL RLS policies verify
+```
+
+**Gün 3: Modül Policy'leri**
+```bash
+# Öncelik #5: Policy katmanı (Analiz #2)
+- [ ] modules/users/policies/users.policy.js
+- [ ] modules/data/policies/data.policy.js
+- [ ] modules/projects/policies/project.policy.js
+- [ ] modules/admin/policies/admin.policy.js
+
+# Test:
+- [ ] Policy test suite
+- [ ] RBAC matrix validation
+```
+
+**Gün 4: API Versioning & Error Handler**
+```bash
+# Öncelik #6: API versioning (Analiz #1)
+- [ ] src/app/routes/v1/ klasörü oluştur
+- [ ] Tüm route'ları /api/v1 altına topla
+- [ ] Frontend BASE_URL güncelle
+
+# Öncelik #7: Global error handler (Analiz #1)
+- [ ] src/app/errors/errorHandler.js
+- [ ] CustomError class
+- [ ] server.js'e ekle
+```
+
+**Gün 5: Validation Schemas**
+```bash
+# Öncelik #8: Zod schemas (Analiz #2)
+- [ ] npm install zod
+- [ ] modules/*/schemas/*.schema.js oluştur
+- [ ] Controller'lara validation ekle
+- [ ] Validation test suite
+```
+
+### Hafta 2: Controller Refactoring (2 gün)
+
+**Gün 6: data & auth Controllers**
+```bash
+# Öncelik #9: data.controller.js refactor
+- [ ] İş kurallarını data.service.js'e taşı
+- [ ] Controller'ı 100 satır altına indir
+- [ ] Schema + policy entegrasyonu
+
+# Öncelik #10: auth.controller.js parçala
+- [ ] login.handler.js
+- [ ] register.handler.js
+- [ ] refresh.handler.js
+- [ ] Rate limiting ekle (brute-force)
+```
+
+**Gün 7: Observability**
+```bash
+# Öncelik #11: Metrics & Audit (Analiz #1)
+- [ ] Prometheus metrics implement et
+- [ ] /internal/metrics endpoint
+- [ ] Audit logging service
+- [ ] ops.audit_logs'a kayıt
+
+# Öncelik #12: Rate limiting
+- [ ] Rate limit middleware
+- [ ] /auth/login'e ekle
+- [ ] Redis connection verify
+```
+
+---
+
+## 📈 BAŞARI METRİKLERİ
+
+### Before (Şu An)
+```
+❌ 2 farklı auth middleware
+❌ 2 farklı config
+❌ api-keys naming çakışması
+❌ Tenant guard yok
+❌ Policy layer yok
+❌ Controller'larda iş kuralı
+❌ Validation dağınık
+❌ Global error handler yok
+❌ API versioning yok
+❌ Metrics yok
+```
+
+### After (7 Gün Sonra)
+```
+✅ Tek auth middleware (RLS context set)
+✅ Tek config (src/core)
+✅ Çoğul naming standardı
+✅ Global tenantGuard aktif
+✅ Modül-bazlı policies
+✅ Controller ince (validate → policy → service)
+✅ Zod schemas
+✅ Global error handler + CustomError
+✅ /api/v1 versioning
+✅ Prometheus metrics + audit logs
+```
+
+### Kalite Metrikleri
+```
+Controller ortalama boyut:     360 satır → 120 satır (-67%)
+Service ortalama boyut:        250 satır → 200 satır (-20%)
+Test coverage:                 0% → 60% (+60%)
+Security score:                5/10 → 9/10 (+80%)
+Maintainability index:         65 → 85 (+30%)
+```
+
+---
+
+## 🎓 BEST PRACTICES ÖZETİ
+
+### 1. Katman Ayrımı
+```javascript
+// ✅ DOĞRU:
+Route    → Path definition only
+Policy   → RBAC + tenant check
+Schema   → Input validation
+Controller → validate → policy → service → response
+Service  → Business logic + transaction
+Model    → DB queries only
+
+// ❌ YANLIŞ:
+Controller → Business logic (NO!)
+Service → DB queries directly (NO!)
+Model → Business logic (NO!)
+```
+
+### 2. İsimlendirme
+```javascript
+// ✅ DOĞRU:
+modules/users/           // Çoğul
+  - users.routes.js
+  - users.controller.js
+  - users.service.js
+
+Route: /api/v1/users     // Çoğul
+
+// ❌ YANLIŞ:
+modules/user/            // Tekil
+  - user.routes.js       // Karışık
+  - users.controller.js  // Karışık
+```
+
+### 3. Error Handling
+```javascript
+// ✅ DOĞRU:
+try {
+  await service.doSomething();
+} catch (error) {
+  next(error);  // Global handler'a ilet
+}
+
+// ❌ YANLIŞ:
+try {
+  await service.doSomething();
+} catch (error) {
+  res.status(500).json({ error: error.message });  // Inconsistent!
+}
+```
+
+### 4. Tenant İzolasyonu
+```javascript
+// ✅ DOĞRU (2 katmanlı):
+app.use(tenantGuard);              // Global: RLS context
+router.use(policies.canAccess);    // Modül: Role check
+
+// ❌ YANLIŞ (sadece biri):
+// Sadece global → Fine-grained control yok
+// Sadece modül → RLS garantisi yok
+```
+
+---
+
+## 📚 REFERANSLAR
+
+### İç Dokümantasyon
+- [ANALIZ #1: Roadmap vs Kod Uyumu](#analiz-1-roadmap-vs-gerçek-kod-uyumu) - Global yaklaşım
+- [BACKEND_PHASE_PLAN.md](./BACKEND_PHASE_PLAN.md) - Phase planning
+- [SMART_ENDPOINT_STRATEGY_V2.md](./SMART_ENDPOINT_STRATEGY_V2.md) - API design
+- [01-Database-Core/04_RLS_Multi_Tenant_Strategy.md](./01-Database-Core/04_RLS_Multi_Tenant_Strategy.md) - RLS implementation
+
+### External Resources
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) - Katman ayrımı
+- [Zod Documentation](https://zod.dev/) - Schema validation
+- [Express Best Practices](https://expressjs.com/en/advanced/best-practice-performance.html) - Performance
+
+---
+
+## 🚀 SONUÇ
+
+### ✅ İki Analiz Birbirini Tamamlıyor
+
+**Analiz #1**: Macro-level (Roadmap vs Kod)  
+**Analiz #2**: Micro-level (Modül-içi yapı)
+
+**Birleştirilmiş yaklaşım**:
+- Global güvenlik katmanı (Analiz #1)
+- Modül-bazlı politikalar (Analiz #2)
+- Hybrid architecture = En güvenli çözüm
+
+### 🎯 7 Günlük Plan Uygulanabilir
+
+- **Gün 1-3**: Kritik güvenlik (P0)
+- **Gün 4-5**: Validation & error handling
+- **Gün 6-7**: Refactoring & observability
+
+### 📊 Beklenen Sonuç
+
+```
+Güvenlik:        5/10 → 9/10  (+80%)
+Maintainability: 65  → 85     (+30%)
+Code Quality:    6/10 → 9/10  (+50%)
+Developer XP:    7/10 → 9/10  (+30%)
+```
+
+**Sonraki Analiz**: TBD
 
 
