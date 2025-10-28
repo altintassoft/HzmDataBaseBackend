@@ -10,10 +10,10 @@ const runMigrations = require('../scripts/migrate');
 const healthRoutes = require('../modules/health/health.routes');
 const authRoutes = require('../modules/auth/auth.routes');
 const projectModuleRoutes = require('../modules/projects/project.routes');
+const adminRoutes = require('../modules/admin/admin.routes'); // ✅ MIGRATED!
 
 // Import legacy routes (will be migrated to modules)
 const genericDataRoutes = require('../routes.OLD/generic-data');
-const adminRoutes = require('../routes.OLD/admin');
 const apiKeysRoutes = require('../routes.OLD/api-keys');
 
 // Create Express app
