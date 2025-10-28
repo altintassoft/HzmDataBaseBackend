@@ -543,6 +543,9 @@ function main() {
   } catch (writeError) {
     console.error(`   ⚠️  Dosya yazma hatası (Railway izin kısıtlaması): ${writeError.message}`);
     console.log(`   ℹ️  Rapor oluşturuldu ancak dosyaya yazılamadı (Railway ortamı).`);
+    // On Railway, output the markdown to stdout so it can be captured
+    console.log('\n' + '='.repeat(60));
+    console.log(markdown);
   }
   
   // Summary

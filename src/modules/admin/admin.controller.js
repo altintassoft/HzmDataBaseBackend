@@ -243,14 +243,14 @@ class AdminController {
       // Run script in background
       exec(`node ${scriptPath}`, (error, stdout, stderr) => {
         if (error) {
-          logger.error('❌ File analysis failed:', error);
+          logger.error(`❌ File analysis failed: ${error.message}`);
           return;
         }
 
-        logger.info('✅ File analysis completed:', stdout);
+        logger.info(`✅ File analysis completed: ${stdout.substring(0, 200)}...`);
 
         if (stderr) {
-          logger.warn('⚠️  File analysis warnings:', stderr);
+          logger.warn(`⚠️  File analysis warnings: ${stderr}`);
         }
       });
 
