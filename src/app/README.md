@@ -17,3 +17,4 @@ Bu klasör uygulamanın başlatma ve yapılandırma dosyalarını içerir.
 - **plugins.js** - Third-party plugin loader
 - **config.js** - App-level configuration
 - **router.js** - Central routing configuration
+
