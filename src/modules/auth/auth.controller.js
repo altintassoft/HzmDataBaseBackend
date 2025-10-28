@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const pool = require('../../core/config/database');
+const { pool } = require('../../core/config/database');
 const config = require('../../core/config');
 const logger = require('../../core/logger');
 

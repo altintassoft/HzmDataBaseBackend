@@ -670,12 +670,12 @@ TOPLAM:                               → 106 dk (~1.8 saat)
 - [x] ADIM 3.3: Grup 3 services ✅ (migrations, architecture, table-comparison)
 - [x] ADIM 3.4: Grup 4 services ✅ (endpoint, plan, phase compliance)
 - [x] ADIM 3.5: Grup 5 services ✅ (wrong, project-structure, all-tables-raw)
-- [ ] ADIM 4: admin.routes.js güncellendi
-- [ ] ADIM 5: server.js güncellendi
+- [x] ADIM 4: admin.routes.js güncellendi ✅ (zaten hazırdı)
+- [x] ADIM 5: server.js güncellendi ✅ (modüle bağlandı)
 - [ ] ADIM 6: Lokal testler başarılı
 - [ ] ADIM 7: Frontend testleri başarılı
-- [ ] ADIM 8: Git commit yapıldı
-- [ ] ADIM 9: Railway testi başarılı
+- [ ] ADIM 8: Git commit yapıldı ✅ (edecab9)
+- [ ] ADIM 9: Railway testi başarılı (deployment izleniyor...)
 - [ ] ADIM 10: ⚠️ Eski dosya silindi (KULLANICIYA SOR!)
 
 ---
