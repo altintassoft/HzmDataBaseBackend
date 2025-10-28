@@ -1,246 +1,218 @@
-# 📦 Backend Modules
+# 📦 Modules
 
-Bu klasör **Domain-Based Modular Architecture** kullanır.
+**Domain-Based Modular Architecture**
 
-## 🏗️ Mimari
+## 🏗️ Mimari Prensipler
+
+### 4-Layer Architecture
 
 Her modül 4 katmandan oluşur:
 
 ```
-module/
-├── {module}.model.js       # Database Access Layer
-├── {module}.service.js     # Business Logic Layer
-├── {module}.controller.js  # Request/Response Handler
-└── {module}.routes.js      # API Endpoints
+Routes → Controller → Service → Model
+(HTTP)   (Validation)  (Business)  (Database)
 ```
 
-## 📂 Mevcut Modüller
+### Separation of Concerns
 
-### ✅ projects/
-**Durum:** Active  
-**Endpoint:** `/api/v1/projects`  
-**Özellikler:**
-- CRUD operations
-- Role-based authorization
-- API Key authentication (3-layer)
+1. **Routes**: HTTP endpoint tanımları
+2. **Controller**: Request/response handling, validation
+3. **Service**: Business logic, orchestration
+4. **Model**: Database access, raw data
 
-### 🚧 auth/ (Planlanan)
-**Endpoint:** `/api/v1/auth`  
-**Özellikler:**
-- Login/Register
-- Email verification
-- Password reset
-- Session management
+## 📁 Modül Yapısı
 
-### 🚧 users/ (Planlanan)
-**Endpoint:** `/api/v1/users`  
-**Özellikler:**
-- User profile management
-- Settings
-- API Keys management
+### Phase 1: Core Modüller (Şu an)
 
-### 🚧 tables/ (Planlanan)
-**Endpoint:** `/api/v1/tables`  
-**Özellikler:**
-- Dynamic table management
-- Schema builder
-- Data operations
-
-### 🚧 api-keys/ (Planlanan)
-**Endpoint:** `/api/v1/api-keys`  
-**Özellikler:**
-- API Key generation
-- Key rotation
-- Usage statistics
-
-### 🚧 admin/ (Planlanan)
-**Endpoint:** `/api/v1/admin`  
-**Özellikler:**
-- Database reports
-- Migration management
-- System health
-
----
-
-## 🎯 Katman Sorumlulukları
-
-### 1. Routes Layer
-```javascript
-// Sorumluluk: API endpoint tanımları
-router.get('/', middleware, controller.method);
 ```
-- HTTP method ve path tanımı
-- Middleware attachment (auth, validation)
-- Route documentation
+modules/
+├── auth/              🔐 Authentication & Authorization
+├── users/             👤 User Management
+├── projects/          📁 Project Management
+├── api-keys/          🔑 API Key Management
+├── data/              💾 Generic Data Operations
+├── admin/             📊 Admin Reports
+└── health/            ❤️ Health Checks
+```
 
-### 2. Controller Layer
+### Phase 2: Business Modüller (Yakında)
+
+```
+modules/
+├── tables/            📋 Dynamic Table Management
+├── companies/         🏢 Company/Customer Management
+├── contacts/          👥 Contact Management
+├── sequences/         🔢 Sequence System
+└── audit/             📝 Audit Logs
+```
+
+### Phase 3: Advanced Modüller (İleride)
+
+```
+modules/
+├── webhooks/          🔗 Webhook Management
+├── notifications/     🔔 Notification System
+├── exports/           📤 Data Export
+└── analytics/         📈 Analytics & Charts
+```
+
+## 🎯 Module Standards
+
+### File Structure
+
+Her modül şu dosyaları içerir:
+
+```
+module-name/
+├── module-name.routes.js       (API endpoints)
+├── module-name.controller.js   (HTTP handlers)
+├── module-name.service.js      (Business logic)
+├── module-name.model.js        (Database access)
+├── middleware/                  (Module-specific - optional)
+├── utils/                       (Module-specific - optional)
+└── README.md                    (Documentation)
+```
+
+### Naming Convention
+
+- **Files**: kebab-case (e.g., `api-key.routes.js`)
+- **Classes**: PascalCase (e.g., `class ApiKeyController`)
+- **Functions**: camelCase (e.g., `getUserById()`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_RETRIES`)
+
+### Import Rules
+
+✅ **Allowed:**
 ```javascript
-// Sorumluluk: HTTP request/response handling
-async method(req, res) {
-  // Extract data from req
-  // Call service
-  // Format response
+// Import from shared/
+const logger = require('../../shared/utils/logger');
+const { authenticateJWT } = require('../../shared/middleware/auth');
+const pool = require('../../shared/config/database');
+```
+
+❌ **Not Allowed:**
+```javascript
+// Don't import from other modules
+const UserService = require('../users/user.service');  ❌
+
+// Don't import from routes/
+const authRoutes = require('../../routes/auth');  ❌
+```
+
+### Error Handling
+
+Her katman kendi hatalarını handle eder:
+
+```javascript
+// Model - throw error
+static async findById(id) {
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    return result.rows[0];
+  } catch (error) {
+    logger.error('Model find by ID error:', error);
+    throw error;  // Let service handle it
+  }
+}
+
+// Service - business logic error
+static async getUser(id) {
+  try {
+    const user = await UserModel.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    return user;
+  } catch (error) {
+    logger.error('Service get user error:', error);
+    throw error;  // Let controller handle it
+  }
+}
+
+// Controller - HTTP response
+static async getUser(req, res) {
+  try {
+    const { id } = req.params;
+    const user = await UserService.getUser(id);
+    res.json({ success: true, data: user });
+  } catch (error) {
+    logger.error('Controller get user error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 }
 ```
-- Request validation
-- Response formatting
-- HTTP status codes
-- Error handling (HTTP layer)
 
-### 3. Service Layer
+## 🔐 Authentication Patterns
+
+### API Key Authentication (Backend-to-Backend)
+
 ```javascript
-// Sorumluluk: Business logic
-async operation(data, user) {
-  // Business rules
-  // Authorization
-  // Data transformation
-  // Call model(s)
-}
-```
-- Business rules enforcement
-- Authorization logic
-- Data validation
-- Orchestration (multiple models)
-- No HTTP concerns
+const { authenticateApiKey } = require('../../shared/middleware/auth');
 
-### 4. Model Layer
+router.use(authenticateApiKey);
+router.get('/data', DataController.list);
+```
+
+### JWT Authentication (Web Frontend)
+
 ```javascript
-// Sorumluluk: Database access
-static async query(params) {
-  // SQL query
-  // Return raw data
-}
-```
-- Pure SQL queries
-- No business logic
-- Error handling (DB level)
-- Returns raw database data
+const { authenticateJWT } = require('../../shared/middleware/auth');
 
----
-
-## 📋 Modül Oluşturma Kuralları
-
-### 1. Dosya İsimlendirme
-```
-{module-name}.model.js
-{module-name}.service.js
-{module-name}.controller.js
-{module-name}.routes.js
+router.use(authenticateJWT);
+router.get('/profile', UserController.getProfile);
 ```
 
-### 2. Class İsimlendirme
+### Hybrid Authentication
+
 ```javascript
-class ProjectModel { }
-class ProjectService { }
-class ProjectController { }
+const { authenticateJwtOrApiKey } = require('../../shared/middleware/auth');
+
+router.use(authenticateJwtOrApiKey);
+router.get('/admin/reports', AdminController.getReports);
 ```
 
-### 3. Export Formatı
+### Role-Based Authorization
+
 ```javascript
-// Model, Service, Controller
-module.exports = ClassName;
+const { authenticateJWT, requireAdmin } = require('../../shared/middleware/auth');
 
-// Routes
-module.exports = router;
+router.use(authenticateJWT);
+router.use(requireAdmin);
+router.get('/users', UserController.listUsers);
 ```
 
-### 4. Import Formatı
-```javascript
-const XyzModel = require('./xyz.model');
-const XyzService = require('./xyz.service');
-```
+## 📊 Status Tracking
 
----
+| Module | Routes | Controller | Service | Model | README | Status |
+|--------|--------|------------|---------|-------|--------|--------|
+| auth | ✅ | ✅ | ✅ | ✅ | ✅ | 🏗️ Not implemented |
+| users | ✅ | ✅ | ✅ | ✅ | ✅ | 🏗️ Not implemented |
+| projects | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Implemented |
+| api-keys | ✅ | ✅ | ✅ | ✅ | ✅ | 🏗️ Not implemented |
+| data | ✅ | ✅ | ✅ | ✅ | ✅ | 🏗️ Not implemented |
+| admin | ✅ | ✅ | ✅ | ✅ | ✅ | 🏗️ Not implemented |
+| health | ✅ | ✅ | - | - | ✅ | 🏗️ Not implemented |
 
-## 🔄 Legacy vs Modular
+## 🚀 Next Steps
 
-### Legacy Routes (src/routes/)
-```
-routes/
-├── auth.js          → Will migrate to modules/auth/
-├── projects.js      → ✅ Migrated to modules/projects/
-├── admin.js         → Will migrate to modules/admin/
-└── api-keys.js      → Will migrate to modules/api-keys/
-```
+1. ✅ Folder structure created
+2. ✅ Skeleton files created
+3. ⏳ Migrate existing code to modules
+4. ⏳ Implement new features
+5. ⏳ Add unit tests
+6. ⏳ Add integration tests
+7. ⏳ Update server.js to use modular routes
 
-### Migration Strategy
-1. ✅ **Modules öncelikli**: Yeni özellikler `modules/` altında
-2. ⏳ **Kademeli taşıma**: Legacy kod zamanla taşınır
-3. 🔄 **Hybrid dönem**: İki yapı birlikte çalışır
-4. 🎯 **Hedef**: Tüm kod `modules/` altında
+## 📚 Documentation
 
----
+Her modülün kendi README'si var:
+- [auth/README.md](./auth/README.md)
+- [users/README.md](./users/README.md)
+- [projects/README.md](./projects/README.md)
+- [api-keys/README.md](./api-keys/README.md)
+- [data/README.md](./data/README.md)
+- [admin/README.md](./admin/README.md)
+- [health/README.md](./health/README.md)
 
-## 🧪 Testing Örneği
-
-```bash
-# Test: Create project
-curl -X POST "http://localhost:3000/api/v1/projects" \
-  -H "X-Email: user@example.com" \
-  -H "X-API-Key: hzm_..." \
-  -H "X-API-Password: ..." \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Test Project"}'
-```
-
----
-
-## 📖 Best Practices
-
-### ✅ DO
-- Keep controllers thin (only HTTP handling)
-- Put business logic in services
-- Use services for authorization
-- Make models database-focused
-- Document all endpoints
-- Write unit tests for services
-- Use TypeScript (future)
-
-### ❌ DON'T
-- Don't put business logic in controllers
-- Don't access database from controllers
-- Don't put HTTP logic in services
-- Don't mix concerns between layers
-- Don't hardcode values
-- Don't skip error handling
-
----
-
-## 🔮 Gelecek Özellikler
-
-### Planlanan Modüller
-- [ ] webhooks/
-- [ ] notifications/
-- [ ] billing/
-- [ ] analytics/
-- [ ] backups/
-- [ ] integrations/
-- [ ] logs/
-- [ ] teams/
-
-### Planlanan İyileştirmeler
-- [ ] TypeScript migration
-- [ ] Validation library (Joi/Zod)
-- [ ] Unit tests (Jest)
-- [ ] Integration tests
-- [ ] API documentation (Swagger)
-- [ ] GraphQL support (maybe)
-
----
-
-## 📚 Kaynaklar
-
-**Clean Architecture:**
-- https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html
-
-**Layered Architecture:**
-- https://www.oreilly.com/library/view/software-architecture-patterns/9781491971437/ch01.html
-
-**Domain-Driven Design:**
-- https://martinfowler.com/bliki/DomainDrivenDesign.html
-
----
-
-**Oluşturulma Tarihi:** 27 Ekim 2025  
-**Son Güncelleme:** 27 Ekim 2025
-
+Shared utilities:
+- [../shared/README.md](../shared/README.md)

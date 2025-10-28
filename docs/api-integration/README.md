@@ -88,3 +88,4 @@ API entegrasyonu ile ilgili sorularınız için:
 - Email: ozgurhzm@hzmsoft.com
 - API Key: Settings sayfasından oluşturabilirsiniz
 
+

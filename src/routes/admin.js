@@ -2345,7 +2345,7 @@ router.post('/analyze-files', authenticateJwtOrApiKey, async (req, res) => {
     const { exec } = require('child_process');
     const path = require('path');
     
-    const scriptPath = path.join(__dirname, '../../scripts/analyze-files.js');
+    const scriptPath = path.join(__dirname, '../scripts/analyze-files.js');
     
     // 🐛 DEBUG: Log paths
     logger.info('📂 __dirname:', __dirname);
@@ -2355,8 +2355,8 @@ router.post('/analyze-files', authenticateJwtOrApiKey, async (req, res) => {
     // Check if script exists
     if (!fs.existsSync(scriptPath)) {
       // Try alternative paths
-      const altPath1 = path.join(process.cwd(), 'scripts/analyze-files.js');
-      const altPath2 = path.join(__dirname, '../../../scripts/analyze-files.js');
+      const altPath1 = path.join(process.cwd(), 'src/scripts/analyze-files.js');
+      const altPath2 = path.join(__dirname, '../../scripts/analyze-files.js');
       
       logger.warn('⚠️  Trying alternative paths...');
       logger.info('Alt path 1:', altPath1, fs.existsSync(altPath1));
