@@ -1,8 +1,8 @@
-const { pool } = require('../../../core/config/database');
-const logger = require('../../../core/logger');
+const { pool } = require('../../../../core/config/database');
+const logger = require('../../../../core/logger');
 const fs = require('fs');
 const path = require('path');
-const MigrationParser = require('../../../core/database/migrationParser');
+const MigrationParser = require('../../../../core/database/migrationParser');
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../../../migrations');
 

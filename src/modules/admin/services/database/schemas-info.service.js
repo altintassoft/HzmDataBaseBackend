@@ -1,5 +1,5 @@
-const { pool } = require('../../../core/config/database');
-const logger = require('../../../core/logger');
+const { pool } = require('../../../../core/config/database');
+const logger = require('../../../../core/logger');
 
 // Allowed schemas for security
 const ALLOWED_SCHEMAS = ['public', 'core', 'app', 'cfg', 'ops'];

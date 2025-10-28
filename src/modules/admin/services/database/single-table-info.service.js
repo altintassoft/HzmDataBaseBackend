@@ -1,5 +1,5 @@
-const { pool } = require('../../../core/config/database');
-const logger = require('../../../core/logger');
+const { pool } = require('../../../../core/config/database');
+const logger = require('../../../../core/logger');
 
 /**
  * Single Table Info Service

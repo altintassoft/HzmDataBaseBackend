@@ -1,4 +1,4 @@
-const logger = require('../../../core/logger');
+const logger = require('../../../../core/logger');
 
 /**
  * Phase Progress Service
