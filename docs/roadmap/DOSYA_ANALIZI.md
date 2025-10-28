@@ -1,6 +1,6 @@
 # 📊 HZM Veri Tabanı - Dosya Analiz Raporu
 
-Son Güncelleme: 2025-10-28 19:42:10 (Otomatik)
+Son Güncelleme: 2025-10-28 19:56:14 (Otomatik)
 Commit: N/A
 
 > **Eşik Değerleri:**
@@ -19,8 +19,8 @@ Commit: N/A
 | Metrik | Değer |
 |--------|-------|
 | Toplam Dosya | 65 |
-| Toplam Satır | 18,356 |
-| Ortalama Dosya Boyutu | 282 satır |
+| Toplam Satır | 18,370 |
+| Ortalama Dosya Boyutu | 283 satır |
 | En Büyük Dosya | 1342 satır 🔴🔴🔴 |
 | En Küçük Dosya | 2 satır |
 
@@ -92,19 +92,19 @@ Commit: N/A
 | # | Dosya | Satır | Yol | Durum |
 |---|-------|-------|-----|-------|
 | 1 | `vite-env.d.ts` | 2 | `Frontend/src/vite-env.d.ts` | ✅ İyi |
-| 2 | `index.ts` | 6 | `Frontend/src/components/layout/index.ts` | ✅ İyi |
-| 3 | `index.ts` | 6 | `Frontend/src/utils/index.ts` | ✅ İyi |
-| 4 | `index.ts` | 7 | `Frontend/src/components/layout/panels/index.ts` | ✅ İyi |
-| 5 | `index.ts` | 7 | `Frontend/src/pages/cio/dashboard/index.ts` | ✅ İyi |
-| 6 | `index.ts` | 9 | `Frontend/src/components/shared/index.ts` | ✅ İyi |
+| 2 | `index.ts` | 7 | `Frontend/src/pages/cio/dashboard/index.ts` | ✅ İyi |
+| 3 | `index.ts` | 8 | `Frontend/src/components/layout/index.ts` | ✅ İyi |
+| 4 | `index.ts` | 8 | `Frontend/src/utils/index.ts` | ✅ İyi |
+| 5 | `index.ts` | 9 | `Frontend/src/components/layout/panels/index.ts` | ✅ İyi |
+| 6 | `index.ts` | 11 | `Frontend/src/components/shared/index.ts` | ✅ İyi |
 | 7 | `main.tsx` | 11 | `Frontend/src/main.tsx` | ✅ İyi |
 | 8 | `Layout.tsx` | 16 | `Frontend/src/components/layout/Layout.tsx` | ✅ İyi |
-| 9 | `user.ts` | 17 | `Frontend/src/types/user.ts` | ✅ İyi |
-| 10 | `ProtectedRoute.tsx` | 19 | `Frontend/src/components/shared/ProtectedRoute.tsx` | ✅ İyi |
+| 9 | `ProtectedRoute.tsx` | 19 | `Frontend/src/components/shared/ProtectedRoute.tsx` | ✅ İyi |
+| 10 | `user.ts` | 19 | `Frontend/src/types/user.ts` | ✅ İyi |
 | 11 | `index.ts` | 22 | `Frontend/src/types/index.ts` | ✅ İyi |
 | 12 | `AdminRoute.tsx` | 23 | `Frontend/src/components/shared/AdminRoute.tsx` | ✅ İyi |
 | 13 | `campaignUtils.ts` | 35 | `Frontend/src/pages/cio/dashboard/utils/campaignUtils.ts` | ✅ İyi |
-| 14 | `database.ts` | 48 | `Frontend/src/types/database.ts` | ✅ İyi |
+| 14 | `database.ts` | 50 | `Frontend/src/types/database.ts` | ✅ İyi |
 | 15 | `ProjectPanel.tsx` | 60 | `Frontend/src/components/layout/panels/ProjectPanel.tsx` | ✅ İyi |
 | 16 | `pricing.ts` | 60 | `Frontend/src/types/pricing.ts` | ✅ İyi |
 | 17 | `index.ts` | 68 | `Frontend/src/pages/cio/dashboard/types/index.ts` | ✅ İyi |
@@ -113,7 +113,7 @@ Commit: N/A
 | 20 | `SEOHead.tsx` | 74 | `Frontend/src/components/shared/SEOHead.tsx` | ✅ İyi |
 | 21 | `socialPlatforms.ts` | 75 | `Frontend/src/pages/cio/dashboard/utils/socialPlatforms.ts` | ✅ İyi |
 | 22 | `PlanComplianceTab.tsx` | 82 | `Frontend/src/pages/admin/reports/tabs/PlanComplianceTab.tsx` | ✅ İyi |
-| 23 | `project.ts` | 98 | `Frontend/src/types/project.ts` | ✅ İyi |
+| 23 | `project.ts` | 100 | `Frontend/src/types/project.ts` | ✅ İyi |
 | 24 | `ConfirmModal.tsx` | 102 | `Frontend/src/components/shared/ConfirmModal.tsx` | ✅ İyi |
 | 25 | `AdDisplay.tsx` | 134 | `Frontend/src/pages/cio/dashboard/components/AdDisplay.tsx` | ✅ İyi |
 | 26 | `CampaignCard.tsx` | 136 | `Frontend/src/pages/cio/dashboard/components/CampaignCard.tsx` | ✅ İyi |
@@ -141,7 +141,7 @@ Commit: N/A
 | Metrik | Değer |
 |--------|-------|
 | Toplam Dosya | 71 |
-| Toplam Satır | 9,951 |
+| Toplam Satır | 9,959 |
 | Ortalama Dosya Boyutu | 140 satır |
 | En Büyük Dosya | 581 satır 🔴 |
 | En Küçük Dosya | 13 satır |
@@ -203,9 +203,9 @@ Commit: N/A
 | 7 | `user.routes.js` | 31 | `Backend/src/modules/users/user.routes.js` | ✅ İyi |
 | 8 | `data.routes.js` | 35 | `Backend/src/modules/data/data.routes.js` | ✅ İyi |
 | 9 | `logger.js` | 36 | `Backend/src/shared/utils/logger.js` | ✅ İyi |
-| 10 | `generators.js` | 39 | `Backend/src/modules/api-keys/utils/generators.js` | ✅ İyi |
-| 11 | `migration-tracker.model.js` | 40 | `Backend/src/modules/admin/models/migration-tracker.model.js` | ✅ İyi |
-| 12 | `schemas-info.service.js` | 40 | `Backend/src/modules/admin/services/database/schemas-info.service.js` | ✅ İyi |
+| 10 | `migration-tracker.model.js` | 40 | `Backend/src/modules/admin/models/migration-tracker.model.js` | ✅ İyi |
+| 11 | `schemas-info.service.js` | 40 | `Backend/src/modules/admin/services/database/schemas-info.service.js` | ✅ İyi |
+| 12 | `generators.js` | 41 | `Backend/src/modules/api-keys/utils/generators.js` | ✅ İyi |
 | 13 | `database.js` | 41 | `Backend/src/shared/config/database.js` | ✅ İyi |
 | 14 | `validator.js` | 42 | `Backend/src/modules/data/utils/validator.js` | ✅ İyi |
 | 15 | `admin.routes.js` | 44 | `Backend/src/modules/admin/admin.routes.js` | ✅ İyi |
@@ -247,13 +247,13 @@ Commit: N/A
 | 51 | `phase-progress.service.js` | 162 | `Backend/src/modules/admin/services/compliance/phase-progress.service.js` | ✅ İyi |
 | 52 | `table-comparison.service.js` | 162 | `Backend/src/modules/admin/services/migrations/table-comparison.service.js` | ✅ İyi |
 | 53 | `tables-info.service.js` | 185 | `Backend/src/modules/admin/services/database/tables-info.service.js` | ✅ İyi |
-| 54 | `master-admin-api-keys.service.js` | 199 | `Backend/src/modules/api-keys/services/master-admin-api-keys.service.js` | ✅ İyi |
+| 54 | `master-admin-api-keys.service.js` | 201 | `Backend/src/modules/api-keys/services/master-admin-api-keys.service.js` | ✅ İyi |
 | 55 | `project.controller.js` | 209 | `Backend/src/modules/projects/project.controller.js` | ✅ İyi |
 | 56 | `project.model.js` | 245 | `Backend/src/modules/projects/project.model.js` | ✅ İyi |
 | 57 | `project.service.js` | 249 | `Backend/src/modules/projects/project.service.js` | ✅ İyi |
-| 58 | `user-api-keys.service.js` | 250 | `Backend/src/modules/api-keys/services/user-api-keys.service.js` | ✅ İyi |
-| 59 | `api-keys.controller.js` | 254 | `Backend/src/modules/api-keys/api-keys.controller.js` | ✅ İyi |
-| 60 | `wrong-progress.service.js` | 255 | `Backend/src/modules/admin/services/compliance/wrong-progress.service.js` | ✅ İyi |
+| 58 | `user-api-keys.service.js` | 252 | `Backend/src/modules/api-keys/services/user-api-keys.service.js` | ✅ İyi |
+| 59 | `wrong-progress.service.js` | 255 | `Backend/src/modules/admin/services/compliance/wrong-progress.service.js` | ✅ İyi |
+| 60 | `api-keys.controller.js` | 256 | `Backend/src/modules/api-keys/api-keys.controller.js` | ✅ İyi |
 | 61 | `migrate.js` | 276 | `Backend/src/scripts/migrate.js` | ✅ İyi |
 | 62 | `admin.controller.js` | 277 | `Backend/src/modules/admin/admin.controller.js` | ✅ İyi |
 | 63 | `schemaInspector.js` | 295 | `Backend/src/core/database/schemaInspector.js` | ✅ İyi |
@@ -311,7 +311,7 @@ Commit: N/A
 | **900+ satır dosya** | 3 | 0 | 🔴 0% | Kritik |
 | **451+ satır dosya** | 12 | 0 | 🔴 0% | Kötü |
 | **301+ satır dosya** | 18 | <5 | 🔴 0% | Kötü |
-| **Ortalama (Frontend)** | 282 satır | <100 | ⚠️ 0% | Yüksek |
+| **Ortalama (Frontend)** | 283 satır | <100 | ⚠️ 0% | Yüksek |
 | **Ortalama (Backend)** | 140 satır | <150 | ✅ 7% | İyi |
 
 ---

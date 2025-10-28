@@ -18,3 +18,5 @@ Bu klasör uygulamanın başlatma ve yapılandırma dosyalarını içerir.
 - **config.js** - App-level configuration
 - **router.js** - Central routing configuration
 
+
+
