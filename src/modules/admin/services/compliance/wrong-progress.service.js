@@ -24,7 +24,7 @@ class WrongProgressService {
       // ========================================================================
       // 1. ENDPOINT ANTI-PATTERNS (Scan route files)
       // ========================================================================
-      const routesDir = path.join(__dirname, '../../../routes.OLD');
+      const routesDir = path.join(__dirname, '../../../../routes.OLD');
       const routeFiles = fs.readdirSync(routesDir).filter(f => f.endsWith('.js'));
       
       for (const file of routeFiles) {
@@ -131,7 +131,7 @@ class WrongProgressService {
       // 3. HARDCODED VALUES (Scan backend files for common anti-patterns)
       // ========================================================================
       
-      const srcDir = path.join(__dirname, '../../..');
+      const srcDir = path.join(__dirname, '../../../..');
       const scanForHardcodedValues = (dir) => {
         const files = fs.readdirSync(dir);
         

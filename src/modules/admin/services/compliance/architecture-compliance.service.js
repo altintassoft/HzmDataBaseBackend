@@ -44,7 +44,7 @@ class ArchitectureComplianceService {
       const migrationConsistencyScore = Math.round((executedMigrations / expectedMigrations) * 100);
 
       // 3. Endpoint Analysis (REAL DATA - Count actual routes from filesystem)
-      const routesDir = path.join(__dirname, '../../..');
+      const routesDir = path.join(__dirname, '../../../..');
       
       let currentEndpoints = 0;
       const endpointList = [];

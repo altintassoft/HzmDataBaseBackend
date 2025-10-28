@@ -16,7 +16,7 @@ class EndpointComplianceService {
       logger.info('📊 Generating Endpoint Compliance Report...');
       
       // Scan all route files
-      const routesDir = path.join(__dirname, '../../../routes.OLD');
+      const routesDir = path.join(__dirname, '../../../../routes.OLD');
       const routeFiles = fs.readdirSync(routesDir).filter(file => file.endsWith('.js') && file !== 'admin.js');
       
       const endpoints = [];
