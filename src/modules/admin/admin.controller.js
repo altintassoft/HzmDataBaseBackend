@@ -1,5 +1,6 @@
 const logger = require('../../core/logger');
 const SyncAnalysisService = require('./services/compliance/sync-analysis.service');
+const AIKnowledgeBaseService = require('./services/ai-knowledge-base.service');
 
 /**
  * Admin Controller
@@ -325,6 +326,182 @@ class AdminController {
         success: false,
         error: error.message
       });
+    }
+  }
+
+  // ============================================================================
+  // AI KNOWLEDGE BASE METHODS
+  // ============================================================================
+
+  /**
+   * GET /api/v1/admin/knowledge-base
+   * List all reports (with filters)
+   */
+  static async getKnowledgeBaseReports(req, res) {
+    try {
+      const filters = {
+        report_type: req.query.report_type,
+        category: req.query.category,
+        tags: req.query.tags ? req.query.tags.split(',') : undefined,
+        status: req.query.status,
+        search: req.query.search,
+        limit: parseInt(req.query.limit) || 50,
+        offset: parseInt(req.query.offset) || 0
+      };
+      
+      const result = await AIKnowledgeBaseService.getAllReports(filters, req.user);
+      res.json(result);
+    } catch (error) {
+      logger.error('Failed to get knowledge base reports:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/admin/knowledge-base/:id
+   * Get single report by ID or slug
+   */
+  static async getKnowledgeBaseReport(req, res) {
+    try {
+      const { id } = req.params;
+      const incrementView = req.query.view === 'true';
+      
+      const result = await AIKnowledgeBaseService.getReport(id, incrementView, req.user);
+      
+      if (!result.success) {
+        return res.status(404).json(result);
+      }
+      
+      res.json(result);
+    } catch (error) {
+      logger.error('Failed to get knowledge base report:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/admin/knowledge-base
+   * Create new report
+   */
+  static async createKnowledgeBaseReport(req, res) {
+    try {
+      const result = await AIKnowledgeBaseService.createReport(req.body, req.user);
+      res.status(201).json(result);
+    } catch (error) {
+      logger.error('Failed to create knowledge base report:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * PUT /api/v1/admin/knowledge-base/:id
+   * Update report
+   */
+  static async updateKnowledgeBaseReport(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await AIKnowledgeBaseService.updateReport(id, req.body, req.user);
+      
+      if (!result.success) {
+        return res.status(404).json(result);
+      }
+      
+      res.json(result);
+    } catch (error) {
+      logger.error('Failed to update knowledge base report:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * DELETE /api/v1/admin/knowledge-base/:id
+   * Delete report (soft delete)
+   */
+  static async deleteKnowledgeBaseReport(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await AIKnowledgeBaseService.deleteReport(id, req.user);
+      
+      if (!result.success) {
+        return res.status(404).json(result);
+      }
+      
+      res.json(result);
+    } catch (error) {
+      logger.error('Failed to delete knowledge base report:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/admin/knowledge-base/import
+   * Import report from file
+   */
+  static async importKnowledgeBaseReport(req, res) {
+    try {
+      const { file_path, ...metadata } = req.body;
+      const result = await AIKnowledgeBaseService.importFromFile(file_path, metadata, req.user);
+      res.status(201).json(result);
+    } catch (error) {
+      logger.error('Failed to import knowledge base report:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/admin/knowledge-base/search
+   * Search reports
+   */
+  static async searchKnowledgeBase(req, res) {
+    try {
+      const { q } = req.query;
+      if (!q) {
+        return res.status(400).json({ success: false, error: 'Search term required' });
+      }
+      
+      const result = await AIKnowledgeBaseService.searchReports(q, {}, req.user);
+      res.json(result);
+    } catch (error) {
+      logger.error('Failed to search knowledge base:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/admin/knowledge-base/:id/export
+   * Export report as file
+   */
+  static async exportKnowledgeBaseReport(req, res) {
+    try {
+      const { id } = req.params;
+      const format = req.query.format || 'md';
+      
+      const result = await AIKnowledgeBaseService.exportReport(id, format, req.user);
+      
+      if (!result.success) {
+        return res.status(404).json(result);
+      }
+      
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      res.send(result.content);
+    } catch (error) {
+      logger.error('Failed to export knowledge base report:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/admin/knowledge-base-stats
+   * Get knowledge base statistics
+   */
+  static async getKnowledgeBaseStats(req, res) {
+    try {
+      const result = await AIKnowledgeBaseService.getStatistics(req.user);
+      res.json(result);
+    } catch (error) {
+      logger.error('Failed to get knowledge base stats:', error);
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 }
