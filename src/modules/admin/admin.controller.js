@@ -576,40 +576,134 @@ class AdminController {
         }
         
         case 'backend_structure': {
-          const fs = require('fs');
-          const path = require('path');
-          const analysisPath = path.join(process.cwd(), 'docs/roadmap/DOSYA_ANALIZI.md');
-          
-          if (fs.existsSync(analysisPath)) {
-            reportData = fs.readFileSync(analysisPath, 'utf8');
-            // Extract backend section
-            const backendMatch = reportData.match(/## 📊 Backend Projesi[\s\S]*?(?=## 📊 Frontend Projesi|$)/);
-            reportData = backendMatch ? backendMatch[0] : reportData;
-          } else {
-            reportData = 'Rapor dosyası bulunamadı';
+          try {
+            // GitHub'dan backend repo'yu tara
+            const GitHubScanner = require('./services/compliance/configuration/scanners/github-scanner');
+            const scanner = new GitHubScanner();
+            
+            const backendRepo = process.env.GITHUB_BACKEND_REPO || 'altintassoft/HzmDataBaseBackend';
+            const [owner, repo] = backendRepo.split('/');
+            
+            logger.info(`📡 Scanning backend structure from GitHub: ${owner}/${repo}`);
+            
+            const tree = await scanner.getRepoTree(owner, repo);
+            const backendFiles = tree.filter(f => f.type === 'blob' && f.path.startsWith('src/'));
+            
+            // Dosya tree'yi markdown formatına çevir
+            let markdown = `## 📊 Backend Projesi\n\n`;
+            markdown += `**GitHub Repository:** ${owner}/${repo}\n`;
+            markdown += `**Toplam Dosya:** ${backendFiles.length}\n`;
+            markdown += `**Tarih:** ${new Date().toLocaleString('tr-TR')}\n\n`;
+            markdown += `### Dosya Listesi\n\n`;
+            markdown += `| # | Dosya | Satır | Yol | Durum |\n`;
+            markdown += `|---|-------|-------|-----|-------|\n`;
+            
+            backendFiles.slice(0, 200).forEach((file, index) => {
+              const fileName = file.path.split('/').pop();
+              // Satır sayısını tahmin et (size / 50)
+              const estimatedLines = file.size ? Math.round(file.size / 50) : 0;
+              let status = '✅ İyi';
+              if (estimatedLines >= 900) status = '🔴🔴🔴 Kritik';
+              else if (estimatedLines >= 700) status = '🔴🔴 Acil';
+              else if (estimatedLines >= 450) status = '🔴 Bölünmeli';
+              else if (estimatedLines >= 300) status = '⚠️ Dikkat';
+              
+              markdown += `| ${index + 1} | \`${fileName}\` | ${estimatedLines} | \`${file.path}\` | ${status} |\n`;
+            });
+            
+            if (backendFiles.length > 200) {
+              markdown += `\n_... ve ${backendFiles.length - 200} dosya daha_\n`;
+            }
+            
+            reportData = markdown;
+            title = `Backend Proje Yapısı - ${new Date().toISOString()}`;
+            description = `GitHub: ${owner}/${repo} (${backendFiles.length} dosya)`;
+            
+          } catch (error) {
+            logger.error('Backend structure scan failed:', error);
+            
+            // Hata mesajı oluştur
+            reportData = `# ⚠️ Backend Yapısı Taranamadı\n\n`;
+            reportData += `## Sebep:\n${error.message}\n\n`;
+            
+            if (error.message.includes('403') || error.message.includes('Bad credentials')) {
+              reportData += `## Çözüm:\nRailway'de GITHUB_TOKEN environment variable'ı ekleyin:\n\n`;
+              reportData += `\`\`\`\nGITHUB_TOKEN=ghp_your_token_here\n`;
+              reportData += `GITHUB_BACKEND_REPO=altintassoft/HzmDataBaseBackend\n\`\`\`\n`;
+            } else if (!process.env.GITHUB_BACKEND_REPO) {
+              reportData += `## Çözüm:\nGITHUB_BACKEND_REPO environment variable tanımlı değil!\n`;
+            } else {
+              reportData += `## Detay:\n\`\`\`\n${error.stack}\n\`\`\`\n`;
+            }
+            
+            title = `Backend Proje Yapısı - HATA - ${new Date().toISOString()}`;
+            description = `GitHub taraması başarısız: ${error.message}`;
           }
-          
-          title = `Backend Proje Yapısı - ${new Date().toISOString()}`;
-          description = 'Backend dosya ve klasör yapısı analizi';
           break;
         }
         
         case 'frontend_structure': {
-          const fs = require('fs');
-          const path = require('path');
-          const analysisPath = path.join(process.cwd(), 'docs/roadmap/DOSYA_ANALIZI.md');
-          
-          if (fs.existsSync(analysisPath)) {
-            reportData = fs.readFileSync(analysisPath, 'utf8');
-            // Extract frontend section
-            const frontendMatch = reportData.match(/## 📊 Frontend Projesi[\s\S]*$/);
-            reportData = frontendMatch ? frontendMatch[0] : reportData;
-          } else {
-            reportData = 'Rapor dosyası bulunamadı';
+          try {
+            // GitHub'dan frontend repo'yu tara
+            const GitHubScanner = require('./services/compliance/configuration/scanners/github-scanner');
+            const scanner = new GitHubScanner();
+            
+            const frontendRepo = process.env.GITHUB_FRONTEND_REPO || 'altintassoft/HzmDatabaseFrontend';
+            const [owner, repo] = frontendRepo.split('/');
+            
+            logger.info(`📡 Scanning frontend structure from GitHub: ${owner}/${repo}`);
+            
+            const tree = await scanner.getRepoTree(owner, repo);
+            const frontendFiles = tree.filter(f => f.type === 'blob' && f.path.startsWith('src/'));
+            
+            // Dosya tree'yi markdown formatına çevir
+            let markdown = `## 📊 Frontend Projesi\n\n`;
+            markdown += `**GitHub Repository:** ${owner}/${repo}\n`;
+            markdown += `**Toplam Dosya:** ${frontendFiles.length}\n`;
+            markdown += `**Tarih:** ${new Date().toLocaleString('tr-TR')}\n\n`;
+            markdown += `### Dosya Listesi\n\n`;
+            markdown += `| # | Dosya | Satır | Yol | Durum |\n`;
+            markdown += `|---|-------|-------|-----|-------|\n`;
+            
+            frontendFiles.slice(0, 200).forEach((file, index) => {
+              const fileName = file.path.split('/').pop();
+              const estimatedLines = file.size ? Math.round(file.size / 50) : 0;
+              let status = '✅ İyi';
+              if (estimatedLines >= 900) status = '🔴🔴🔴 Kritik';
+              else if (estimatedLines >= 700) status = '🔴🔴 Acil';
+              else if (estimatedLines >= 450) status = '🔴 Bölünmeli';
+              else if (estimatedLines >= 300) status = '⚠️ Dikkat';
+              
+              markdown += `| ${index + 1} | \`${fileName}\` | ${estimatedLines} | \`${file.path}\` | ${status} |\n`;
+            });
+            
+            if (frontendFiles.length > 200) {
+              markdown += `\n_... ve ${frontendFiles.length - 200} dosya daha_\n`;
+            }
+            
+            reportData = markdown;
+            title = `Frontend Proje Yapısı - ${new Date().toISOString()}`;
+            description = `GitHub: ${owner}/${repo} (${frontendFiles.length} dosya)`;
+            
+          } catch (error) {
+            logger.error('Frontend structure scan failed:', error);
+            
+            reportData = `# ⚠️ Frontend Yapısı Taranamadı\n\n`;
+            reportData += `## Sebep:\n${error.message}\n\n`;
+            
+            if (error.message.includes('403') || error.message.includes('Bad credentials')) {
+              reportData += `## Çözüm:\nRailway'de GITHUB_TOKEN environment variable'ı ekleyin:\n\n`;
+              reportData += `\`\`\`\nGITHUB_TOKEN=ghp_your_token_here\n`;
+              reportData += `GITHUB_FRONTEND_REPO=altintassoft/HzmDatabaseFrontend\n\`\`\`\n`;
+            } else if (!process.env.GITHUB_FRONTEND_REPO) {
+              reportData += `## Çözüm:\nGITHUB_FRONTEND_REPO environment variable tanımlı değil!\n`;
+            } else {
+              reportData += `## Detay:\n\`\`\`\n${error.stack}\n\`\`\`\n`;
+            }
+            
+            title = `Frontend Proje Yapısı - HATA - ${new Date().toISOString()}`;
+            description = `GitHub taraması başarısız: ${error.message}`;
           }
-          
-          title = `Frontend Proje Yapısı - ${new Date().toISOString()}`;
-          description = 'Frontend dosya ve klasör yapısı analizi';
           break;
         }
         
