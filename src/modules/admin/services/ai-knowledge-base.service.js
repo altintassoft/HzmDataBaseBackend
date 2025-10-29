@@ -1,4 +1,4 @@
-const pool = require('../../../core/database');
+const { pool } = require('../../../core/config/database');
 const logger = require('../../../core/logger');
 const fs = require('fs');
 const path = require('path');
