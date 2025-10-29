@@ -30,3 +30,4 @@ class Rule02Dynamic {
 
 module.exports = Rule02Dynamic;
 
+

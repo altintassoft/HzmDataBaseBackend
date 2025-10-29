@@ -38,3 +38,4 @@ class Rule07ErrorHandling {
 
 module.exports = Rule07ErrorHandling;
 
+

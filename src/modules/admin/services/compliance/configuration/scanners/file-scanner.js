@@ -95,3 +95,4 @@ class FileScanner {
 
 module.exports = FileScanner;
 
+

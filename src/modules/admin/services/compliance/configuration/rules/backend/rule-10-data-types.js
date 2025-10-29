@@ -41,3 +41,4 @@ class Rule10DataTypes {
 
 module.exports = Rule10DataTypes;
 
+

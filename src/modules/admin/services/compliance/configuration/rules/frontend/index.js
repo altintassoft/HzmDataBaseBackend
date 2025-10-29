@@ -31,3 +31,4 @@ module.exports = {
   Rule20Documentation: require('./rule-20-documentation')
 };
 
+

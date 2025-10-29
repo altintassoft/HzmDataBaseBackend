@@ -28,3 +28,4 @@ class Rule12Performance {
 
 module.exports = Rule12Performance;
 
+

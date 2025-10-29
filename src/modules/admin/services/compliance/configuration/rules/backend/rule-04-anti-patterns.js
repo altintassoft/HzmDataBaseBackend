@@ -45,3 +45,4 @@ class Rule04AntiPatterns {
 
 module.exports = Rule04AntiPatterns;
 
+

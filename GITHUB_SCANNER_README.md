@@ -212,3 +212,4 @@ GITHUB_FRONTEND_REPO=altintassoft/HzmDatabaseFrontend
 - [Creating a personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
 - [Railway Environment Variables](https://docs.railway.app/guides/variables)
 
+

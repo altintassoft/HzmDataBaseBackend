@@ -24,3 +24,4 @@ class Rule19FeatureFlags {
 
 module.exports = Rule19FeatureFlags;
 
+

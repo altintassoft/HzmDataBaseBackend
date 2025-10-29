@@ -95,3 +95,4 @@ class RuleFormatter {
 
 module.exports = RuleFormatter;
 
+

@@ -29,3 +29,4 @@ class Rule05BestPractices {
 
 module.exports = Rule05BestPractices;
 
+

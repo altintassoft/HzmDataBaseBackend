@@ -46,3 +46,4 @@ class Rule09Naming {
 
 module.exports = Rule09Naming;
 
+
