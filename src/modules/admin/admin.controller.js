@@ -539,8 +539,8 @@ class AdminController {
       // Generate report based on type
       switch(type) {
         case 'backend_tables': {
-          const DatabaseService = require('../data/data.service');
-          const tables = await DatabaseService.getDatabaseInfo('tables', {}, user);
+          const TablesInfoService = require('./services/database/tables-info.service');
+          const tables = await TablesInfoService.getTablesInfo(['columns', 'indexes']);
           reportData = JSON.stringify(tables, null, 2);
           title = `Backend Tabloları - ${new Date().toISOString()}`;
           description = 'PostgreSQL veritabanındaki tüm tablolar ve metadata bilgileri';
@@ -548,8 +548,8 @@ class AdminController {
         }
         
         case 'migration_schema': {
-          const DatabaseService = require('../data/data.service');
-          const schema = await DatabaseService.getDatabaseInfo('schemas', {}, user);
+          const SchemasInfoService = require('./services/database/schemas-info.service');
+          const schema = await SchemasInfoService.getSchemasInfo();
           reportData = JSON.stringify(schema, null, 2);
           title = `Migration & Schema - ${new Date().toISOString()}`;
           description = 'Veritabanı schema bilgileri ve migration durumu';
