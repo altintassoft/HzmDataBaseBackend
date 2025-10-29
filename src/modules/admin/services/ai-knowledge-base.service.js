@@ -442,6 +442,143 @@ class AIKnowledgeBaseService {
   }
 
   /**
+   * Upsert report (UPDATE if exists, INSERT if not)
+   * Used for live reports that should replace old versions
+   */
+  static async upsertReport(data, user) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      await this.setRLSContext(client, user);
+      
+      const {
+        report_type,
+        title,
+        content,
+        description = null,
+        summary = null,
+        tags = [],
+        keywords = [],
+        topics = [],
+        priority = null,
+        status = 'published'
+      } = data;
+      
+      const tenant_id = user.tenant_id || 1;
+      const user_id = user.id || 1;
+      
+      // Check if report exists
+      const existingQuery = `
+        SELECT id, title, content 
+        FROM ops.ai_knowledge_base 
+        WHERE report_type = $1 
+          AND tenant_id = $2 
+          AND is_latest_version = true 
+          AND is_deleted = false
+        LIMIT 1
+      `;
+      
+      const existing = await client.query(existingQuery, [report_type, tenant_id]);
+      
+      let result;
+      
+      if (existing.rows.length > 0) {
+        // UPDATE existing report
+        const updateQuery = `
+          UPDATE ops.ai_knowledge_base
+          SET 
+            title = $1,
+            content = $2,
+            description = $3,
+            summary = $4,
+            tags = $5,
+            keywords = $6,
+            topics = $7,
+            priority = $8,
+            status = $9,
+            updated_at = NOW(),
+            updated_by = $10,
+            published_at = NOW()
+          WHERE id = $11
+          RETURNING *
+        `;
+        
+        result = await client.query(updateQuery, [
+          title,
+          content,
+          description,
+          summary,
+          tags,
+          keywords,
+          topics,
+          priority,
+          status,
+          user_id,
+          existing.rows[0].id
+        ]);
+        
+        // Log audit
+        await this.logAudit(client, existing.rows[0].id, 'upsert_update', {
+          old_title: existing.rows[0].title,
+          new_title: title
+        }, user);
+        
+        logger.info(`✅ Report updated: ${report_type}`);
+        
+      } else {
+        // INSERT new report
+        const insertQuery = `
+          INSERT INTO ops.ai_knowledge_base (
+            report_type, title, content, description, summary,
+            tags, keywords, topics, priority, status,
+            created_by, updated_by, tenant_id, published_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11, $12, NOW())
+          RETURNING *
+        `;
+        
+        result = await client.query(insertQuery, [
+          report_type,
+          title,
+          content,
+          description,
+          summary,
+          tags,
+          keywords,
+          topics,
+          priority,
+          status,
+          user_id,
+          tenant_id
+        ]);
+        
+        // Log audit
+        await this.logAudit(client, result.rows[0].id, 'upsert_insert', null, user);
+        
+        logger.info(`✅ Report created: ${report_type}`);
+      }
+      
+      await client.query('COMMIT');
+      
+      return {
+        success: true,
+        report: result.rows[0],
+        action: existing.rows.length > 0 ? 'updated' : 'created'
+      };
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to upsert report:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Audit log helper
    */
   static async logAudit(client, kb_id, action, changed_fields, user) {

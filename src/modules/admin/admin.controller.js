@@ -492,6 +492,173 @@ class AdminController {
   }
 
   /**
+   * POST /api/v1/admin/generate-report
+   * Generate live report and store in AI Knowledge Base
+   * 
+   * Query params:
+   * - type: backend_tables | migration_schema | backend_config | frontend_config | backend_structure | frontend_structure
+   */
+  static async generateReport(req, res) {
+    try {
+      const { type } = req.query;
+      const user = req.user;
+      
+      // Role check: only admin and master_admin
+      if (!user.role || !['admin', 'master_admin'].includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          message: 'Bu endpoint sadece Admin ve Master Admin içindir.'
+        });
+      }
+      
+      // Validate type
+      const VALID_TYPES = [
+        'backend_tables',
+        'migration_schema',
+        'backend_config',
+        'frontend_config',
+        'backend_structure',
+        'frontend_structure'
+      ];
+      
+      if (!type || !VALID_TYPES.includes(type)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid type',
+          message: `Type must be one of: ${VALID_TYPES.join(', ')}`
+        });
+      }
+      
+      logger.info(`🔄 Generating report: ${type}`);
+      
+      let reportData;
+      let title;
+      let description;
+      
+      // Generate report based on type
+      switch(type) {
+        case 'backend_tables': {
+          const DatabaseService = require('../data/data.service');
+          const tables = await DatabaseService.getDatabaseInfo('tables', {}, user);
+          reportData = JSON.stringify(tables, null, 2);
+          title = `Backend Tabloları - ${new Date().toISOString()}`;
+          description = 'PostgreSQL veritabanındaki tüm tablolar ve metadata bilgileri';
+          break;
+        }
+        
+        case 'migration_schema': {
+          const DatabaseService = require('../data/data.service');
+          const schema = await DatabaseService.getDatabaseInfo('schemas', {}, user);
+          reportData = JSON.stringify(schema, null, 2);
+          title = `Migration & Schema - ${new Date().toISOString()}`;
+          description = 'Veritabanı schema bilgileri ve migration durumu';
+          break;
+        }
+        
+        case 'backend_config': {
+          const ConfigComplianceService = require('./services/compliance/configuration');
+          const compliance = await ConfigComplianceService.getFullCompliance();
+          reportData = JSON.stringify(compliance.backend, null, 2);
+          title = `Backend Configuration Compliance - ${new Date().toISOString()}`;
+          description = 'Backend kod taraması ve konfigurasyon uyum raporu';
+          break;
+        }
+        
+        case 'frontend_config': {
+          const ConfigComplianceService = require('./services/compliance/configuration');
+          const compliance = await ConfigComplianceService.getFullCompliance();
+          reportData = JSON.stringify(compliance.frontend, null, 2);
+          title = `Frontend Configuration Compliance - ${new Date().toISOString()}`;
+          description = 'Frontend GitHub taraması ve konfigurasyon uyum raporu';
+          break;
+        }
+        
+        case 'backend_structure': {
+          const fs = require('fs');
+          const path = require('path');
+          const analysisPath = path.join(process.cwd(), 'docs/roadmap/DOSYA_ANALIZI.md');
+          
+          if (fs.existsSync(analysisPath)) {
+            reportData = fs.readFileSync(analysisPath, 'utf8');
+            // Extract backend section
+            const backendMatch = reportData.match(/## 📊 Backend Projesi[\s\S]*?(?=## 📊 Frontend Projesi|$)/);
+            reportData = backendMatch ? backendMatch[0] : reportData;
+          } else {
+            reportData = 'Rapor dosyası bulunamadı';
+          }
+          
+          title = `Backend Proje Yapısı - ${new Date().toISOString()}`;
+          description = 'Backend dosya ve klasör yapısı analizi';
+          break;
+        }
+        
+        case 'frontend_structure': {
+          const fs = require('fs');
+          const path = require('path');
+          const analysisPath = path.join(process.cwd(), 'docs/roadmap/DOSYA_ANALIZI.md');
+          
+          if (fs.existsSync(analysisPath)) {
+            reportData = fs.readFileSync(analysisPath, 'utf8');
+            // Extract frontend section
+            const frontendMatch = reportData.match(/## 📊 Frontend Projesi[\s\S]*$/);
+            reportData = frontendMatch ? frontendMatch[0] : reportData;
+          } else {
+            reportData = 'Rapor dosyası bulunamadı';
+          }
+          
+          title = `Frontend Proje Yapısı - ${new Date().toISOString()}`;
+          description = 'Frontend dosya ve klasör yapısı analizi';
+          break;
+        }
+        
+        default:
+          return res.status(400).json({
+            success: false,
+            error: 'Unsupported type'
+          });
+      }
+      
+      // Upsert report to AI Knowledge Base
+      const result = await AIKnowledgeBaseService.upsertReport({
+        report_type: type,
+        title,
+        description,
+        content: reportData,
+        tags: ['live-report', 'auto-generated'],
+        keywords: [type, 'report'],
+        status: 'published'
+      }, user);
+      
+      if (result.success) {
+        logger.info(`✅ Report generated: ${type} (${result.action})`);
+        res.json({
+          success: true,
+          message: `Rapor başarıyla ${result.action === 'created' ? 'oluşturuldu' : 'güncellendi'}`,
+          report: {
+            id: result.report.id,
+            type: result.report.report_type,
+            title: result.report.title,
+            updated_at: result.report.updated_at
+          }
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error
+        });
+      }
+      
+    } catch (error) {
+      logger.error('Failed to generate report:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
    * GET /api/v1/admin/knowledge-base-stats
    * Get knowledge base statistics
    */

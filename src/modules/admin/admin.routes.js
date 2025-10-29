@@ -49,6 +49,19 @@ router.post('/sync-analysis', authenticateJwtOrApiKey, AdminController.syncAnaly
  */
 router.post('/analyze-files', authenticateJwtOrApiKey, AdminController.analyzeFiles);
 
+/**
+ * Generate Live Report
+ * POST /api/v1/admin/generate-report?type=<report_type>
+ * 
+ * Generates a live report and stores it in AI Knowledge Base
+ * Replaces old report if exists (UPSERT)
+ * 
+ * Types: backend_tables, migration_schema, backend_config, frontend_config, backend_structure, frontend_structure
+ * 
+ * Auth: Admin or Master Admin only
+ */
+router.post('/generate-report', authenticateJwtOrApiKey, AdminController.generateReport);
+
 // ============================================================================
 // AI KNOWLEDGE BASE ROUTES (Master Admin Only)
 // ============================================================================
