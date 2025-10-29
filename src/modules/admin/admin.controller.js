@@ -704,8 +704,8 @@ class AdminController {
       try {
         // RLS BYPASS for admin/master_admin (show ALL tenants)
         await client.query("SET LOCAL app.bypass_rls = 'true'");
-        await client.query("SET LOCAL app.user_id = $1", [user.id]);
-        await client.query("SET LOCAL app.user_role = $1", [user.role]);
+        await client.query(`SET LOCAL app.current_user_id = '${parseInt(user.id)}'`);
+        await client.query(`SET LOCAL app.current_user_role = '${user.role}'`);
 
         // Get table data
         const dataQuery = `
