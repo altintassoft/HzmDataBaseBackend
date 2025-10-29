@@ -493,6 +493,73 @@ class AdminController {
   }
 
   /**
+   * GET /api/v1/admin/get-latest-report
+   * Get latest report from AI Knowledge Base (admin-friendly)
+   */
+  static async getLatestReport(req, res) {
+    try {
+      const { type } = req.query;
+      const user = req.user;
+
+      if (!type) {
+        return res.status(400).json({
+          success: false,
+          error: 'Report type required'
+        });
+      }
+
+      const client = await pool.connect();
+      
+      try {
+        // Set RLS context
+        await client.query(`SET LOCAL app.current_user_id = '${parseInt(user.id)}'`);
+        await client.query(`SET LOCAL app.current_user_role = '${user.role}'`);
+        await client.query(`SET LOCAL app.current_tenant_id = '${user.tenant_id || 1}'`);
+
+        // For admin/master_admin: bypass RLS to see all reports
+        if (user.role === 'admin' || user.role === 'master_admin') {
+          await client.query("SET LOCAL app.bypass_rls = 'true'");
+        }
+
+        const query = `
+          SELECT id, report_type, title, description, content, created_at, updated_at, published_at
+          FROM ops.ai_knowledge_base
+          WHERE report_type = $1 
+            AND is_latest_version = true 
+            AND is_deleted = false
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `;
+        
+        const result = await client.query(query, [type]);
+
+        if (result.rows.length > 0) {
+          res.json({
+            success: true,
+            report: result.rows[0]
+          });
+        } else {
+          res.json({
+            success: true,
+            report: null,
+            message: 'Henüz rapor oluşturulmamış'
+          });
+        }
+
+      } finally {
+        client.release();
+      }
+
+    } catch (error) {
+      logger.error('Failed to get latest report:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
    * POST /api/v1/admin/generate-report
    * Generate live report and store in AI Knowledge Base
    * 

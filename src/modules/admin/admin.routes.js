@@ -50,6 +50,17 @@ router.post('/sync-analysis', authenticateJwtOrApiKey, AdminController.syncAnaly
 router.post('/analyze-files', authenticateJwtOrApiKey, AdminController.analyzeFiles);
 
 /**
+ * Get Latest Report
+ * GET /api/v1/admin/get-latest-report?type=<report_type>
+ * 
+ * Retrieves the latest report from AI Knowledge Base
+ * Returns null if no report exists
+ * 
+ * Auth: Admin or Master Admin
+ */
+router.get('/get-latest-report', authenticateJwtOrApiKey, AdminController.getLatestReport);
+
+/**
  * Generate Live Report
  * POST /api/v1/admin/generate-report?type=<report_type>
  * 
