@@ -26,3 +26,5 @@ class Rule15CodeQuality {
 module.exports = Rule15CodeQuality;
 
 
+
+

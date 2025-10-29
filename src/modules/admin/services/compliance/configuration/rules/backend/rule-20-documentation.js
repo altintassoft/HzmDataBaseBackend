@@ -29,3 +29,5 @@ class Rule20Documentation {
 module.exports = Rule20Documentation;
 
 
+
+

@@ -1,6 +1,7 @@
 const logger = require('../../core/logger');
 const SyncAnalysisService = require('./services/compliance/sync-analysis.service');
 const AIKnowledgeBaseService = require('./services/ai-knowledge-base.service');
+const { pool } = require('../../core/config/database');
 
 /**
  * Admin Controller
@@ -698,7 +699,6 @@ class AdminController {
         });
       }
 
-      const pool = require('../../core/config/database');
       const client = await pool.connect();
 
       try {
