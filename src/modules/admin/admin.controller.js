@@ -707,16 +707,9 @@ class AdminController {
         await client.query(`SET LOCAL app.current_user_id = '${parseInt(user.id)}'`);
         await client.query(`SET LOCAL app.current_user_role = '${user.role}'`);
 
-        // Get table data
-        const dataQuery = `
-          SELECT * 
-          FROM ${schema}.${table}
-          ORDER BY 
-            CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = 'created_at') 
-            THEN created_at END DESC
-          LIMIT $3 OFFSET $4
-        `;
-        const dataResult = await client.query(dataQuery, [schema, table, parseInt(limit), parseInt(offset)]);
+        // Get table data (without ORDER BY to avoid errors)
+        const dataQuery = `SELECT * FROM ${schema}.${table} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+        const dataResult = await client.query(dataQuery);
 
         // Get total count
         const countQuery = `SELECT COUNT(*) as total FROM ${schema}.${table}`;
