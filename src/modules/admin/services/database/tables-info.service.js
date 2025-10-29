@@ -31,9 +31,9 @@ class TablesInfoService {
       for (const table of tablesResult.rows) {
         const { schemaname, tablename, description } = table;
         const tableInfo = {
-          schema: schemaname,
-          name: tablename,
-          fullName: `${schemaname}.${tablename}`,
+          schema_name: schemaname,
+          table_name: tablename,
+          full_name: `${schemaname}.${tablename}`,
           description: description || undefined
         };
 
@@ -122,7 +122,7 @@ class TablesInfoService {
             };
           });
 
-          tableInfo.columnCount = columnsResult.rows.length;
+          tableInfo.column_count = columnsResult.rows.length;
         }
 
         // Include indexes
@@ -133,7 +133,17 @@ class TablesInfoService {
             WHERE schemaname = $1 AND tablename = $2;
           `, [schemaname, tablename]);
           tableInfo.indexes = indexesResult.rows;
-          tableInfo.indexCount = indexesResult.rows.length;
+          tableInfo.index_count = indexesResult.rows.length;
+        }
+
+        // Always include row count
+        try {
+          const countResult = await pool.query(`
+            SELECT COUNT(*) as count FROM ${schemaname}.${tablename};
+          `);
+          tableInfo.row_count = parseInt(countResult.rows[0].count);
+        } catch (err) {
+          tableInfo.row_count = null;
         }
 
         // Include RLS status
@@ -165,15 +175,28 @@ class TablesInfoService {
               AND tc.table_schema = $1
               AND tc.table_name = $2;
           `, [schemaname, tablename]);
-          tableInfo.foreignKeys = fkResult.rows;
-          tableInfo.foreignKeyCount = fkResult.rows.length;
+          tableInfo.foreign_keys = fkResult.rows;
+          tableInfo.foreign_key_count = fkResult.rows.length;
         }
 
         tableInfo.status = 'active';
         tables.push(tableInfo);
       }
 
-      return { count: tables.length, tables };
+      // Calculate summary
+      const schemas = new Set(tables.map(t => t.schema_name));
+      const totalColumns = tables.reduce((sum, t) => sum + (t.column_count || 0), 0);
+      const totalIndexes = tables.reduce((sum, t) => sum + (t.index_count || 0), 0);
+
+      return {
+        summary: {
+          total_tables: tables.length,
+          total_schemas: schemas.size,
+          total_columns: totalColumns,
+          total_indexes: totalIndexes
+        },
+        tables
+      };
     } catch (error) {
       logger.error('TablesInfoService error:', error);
       throw error;
