@@ -265,11 +265,18 @@ async function runMigrations() {
   }
 }
 
-// Only exit if run directly (not imported)
+// Export for use in server.js
+module.exports = runMigrations;
+
+// Only run directly if this is the main module
 if (require.main === module) {
   runMigrations()
-    .then(() => process.exit(0))
-    .catch(() => process.exit(1));
-} else {
-  module.exports = runMigrations;
+    .then(() => {
+      logger.info('✅ Migration script completed');
+      process.exit(0);
+    })
+    .catch((error) => {
+      logger.error('❌ Migration script failed:', error);
+      process.exit(1);
+    });
 }

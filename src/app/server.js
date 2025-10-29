@@ -74,13 +74,20 @@ app.use((err, req, res, next) => {
 // Initialize and start server
 const startServer = async () => {
   try {
+    // Run migrations first (before database init)
+    logger.info('🔄 Running database migrations...');
+    try {
+      await runMigrations();
+      logger.info('✅ Migrations completed successfully!');
+    } catch (migrationError) {
+      logger.error('❌ Migration failed:', migrationError);
+      // Continue anyway - migrations might already be applied
+      logger.warn('⚠️  Continuing despite migration error...');
+    }
+
     // Initialize database
     logger.info('Initializing database...');
     await initDatabase();
-
-    // Run migrations
-    logger.info('Running database migrations...');
-    await runMigrations();
 
     // Initialize Redis
     logger.info('Initializing Redis...');
