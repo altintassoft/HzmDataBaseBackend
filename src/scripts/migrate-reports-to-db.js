@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const pool = require('../core/database');
+const { pool } = require('../core/config/database');
 const logger = require('../core/logger');
 
 const REPORTS_TO_MIGRATE = [
