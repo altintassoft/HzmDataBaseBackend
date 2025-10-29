@@ -1,99 +1,109 @@
 const logger = require('../../../../core/logger');
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
 
 /**
  * Project Structure Service
- * Read DOSYA_ANALIZI.md report
+ * Scan backend/frontend structure from GitHub
  */
 class ProjectStructureService {
   /**
    * Get project structure
    * @param {String} target - Target (frontend or backend)
-   * @returns {Object} Markdown report content
+   * @returns {Object} Markdown report content from GitHub
    */
   static async getProjectStructure(target) {
     try {
-      logger.info(`Reading file analysis report from DOSYA_ANALIZI.md`);
+      logger.info(`Scanning ${target} structure from GitHub...`);
       
-      // First try to read existing report
-      const reportPath = path.join(__dirname, '../../../../../docs/roadmap/DOSYA_ANALIZI.md');
+      // GitHub scanner kullan
+      const GitHubScanner = require('../../compliance/configuration/scanners/github-scanner');
+      const scanner = new GitHubScanner();
       
-      // Check if report exists and is recent (less than 5 minutes old)
-      if (fs.existsSync(reportPath)) {
-        const stats = fs.statSync(reportPath);
-        const ageInMinutes = (Date.now() - stats.mtime.getTime()) / 1000 / 60;
-        
-        if (ageInMinutes < 5) {
-          // Report is fresh, use it
-          const markdownContent = fs.readFileSync(reportPath, 'utf8');
-          return {
-            type: 'markdown',
-            content: markdownContent,
-            reportPath: 'docs/roadmap/DOSYA_ANALIZI.md',
-            lastUpdated: stats.mtime.toISOString(),
-            note: 'Cached report (updated < 5 minutes ago)'
-          };
-        }
+      // Repo bilgilerini al
+      let repo, owner;
+      if (target === 'frontend') {
+        const frontendRepo = process.env.GITHUB_FRONTEND_REPO || 'altintassoft/HzmDatabaseFrontend';
+        [owner, repo] = frontendRepo.split('/');
+      } else {
+        const backendRepo = process.env.GITHUB_BACKEND_REPO || 'altintassoft/HzmDataBaseBackend';
+        [owner, repo] = backendRepo.split('/');
       }
       
-      // Report doesn't exist or is stale - generate on the fly
-      logger.info('Generating fresh file analysis report...');
+      logger.info(`📡 Fetching ${target} structure from GitHub: ${owner}/${repo}`);
       
-      try {
-        const scriptPath = path.join(__dirname, '../../../../scripts/analyze-files.js');
+      // GitHub'dan tree'yi çek
+      const tree = await scanner.getRepoTree(owner, repo);
+      const files = tree.filter(f => f.type === 'blob' && f.path.startsWith('src/'));
+      
+      logger.info(`✅ Fetched ${files.length} ${target} files from GitHub`);
+      
+      // Markdown formatına çevir
+      let markdown = `## 📊 ${target === 'frontend' ? 'Frontend' : 'Backend'} Projesi\n\n`;
+      markdown += `**GitHub Repository:** ${owner}/${repo}\n`;
+      markdown += `**Toplam Dosya:** ${files.length}\n`;
+      markdown += `**Tarih:** ${new Date().toLocaleString('tr-TR')}\n\n`;
+      markdown += `### Dosya Listesi\n\n`;
+      markdown += `| # | Dosya | Satır | Yol | Durum |\n`;
+      markdown += `|---|-------|-------|-----|-------|\n`;
+      
+      files.slice(0, 200).forEach((file, index) => {
+        const fileName = file.path.split('/').pop();
+        // Satır tahmini (size / 50 bytes per line)
+        const estimatedLines = file.size ? Math.round(file.size / 50) : 0;
         
-        // Run script and capture output directly (don't write to file on Railway)
-        const stdout = execSync(`node ${scriptPath}`, {
-          encoding: 'utf8',
-          maxBuffer: 10 * 1024 * 1024 // 10MB buffer
-        });
+        let status = '✅ İyi';
+        if (estimatedLines >= 900) status = '🔴🔴🔴 Kritik';
+        else if (estimatedLines >= 700) status = '🔴🔴 Acil';
+        else if (estimatedLines >= 450) status = '🔴 Bölünmeli';
+        else if (estimatedLines >= 300) status = '⚠️ Dikkat';
         
-        // Parse the output to extract the markdown content
-        const lines = stdout.split('\n');
-        const markdownStartIndex = lines.findIndex(line => line.includes('==============='));
-        
-        if (markdownStartIndex >= 0) {
-          // Extract markdown portion from stdout
-          const markdownContent = lines.slice(markdownStartIndex).join('\n');
-          
-          return {
-            type: 'markdown',
-            content: markdownContent,
-            reportPath: 'Generated on-the-fly',
-            lastUpdated: new Date().toISOString(),
-            note: 'Fresh report generated (Railway mode)'
-          };
-        } else {
-          // Fallback: return the raw stdout as markdown
-          return {
-            type: 'markdown',
-            content: '# File Analysis Report\n\n```\n' + stdout + '\n```',
-            reportPath: 'Generated on-the-fly',
-            lastUpdated: new Date().toISOString(),
-            note: 'Raw output (Railway mode)'
-          };
-        }
-      } catch (execError) {
-        logger.error('Failed to run analyze script:', execError);
-        
-        // Fallback: return error message
-        return {
-          type: 'markdown',
-          content: `# ⚠️ Dosya Analizi Yapılamadı\n\n## Hata:\n\`\`\`\n${execError.message}\n\`\`\`\n\n## Çözüm:\n\n1. "Analiz Çalıştır" butonuna tıklayın\n2. 5-10 saniye bekleyin\n3. Sayfayı yenileyin`,
-          reportPath: 'Error',
-          lastUpdated: new Date().toISOString(),
-          note: 'Analysis failed'
-        };
+        markdown += `| ${index + 1} | \`${fileName}\` | ${estimatedLines} | \`${file.path}\` | ${status} |\n`;
+      });
+      
+      if (files.length > 200) {
+        markdown += `\n_... ve ${files.length - 200} dosya daha_\n`;
       }
-
-    } catch (error) {
-      logger.error('Failed to read DOSYA_ANALIZI.md:', error);
+      
       return {
-        error: 'Failed to read report',
-        message: error.message,
-        data: null
+        type: 'markdown',
+        content: markdown,
+        reportPath: `GitHub: ${owner}/${repo}`,
+        lastUpdated: new Date().toISOString(),
+        fileCount: files.length,
+        note: `GitHub scan - ${files.length} files`
+      };
+      
+    } catch (error) {
+      logger.error(`Failed to scan ${target} structure from GitHub:`, error);
+      
+      // Hata durumunda açıklayıcı markdown döndür
+      let errorMarkdown = `# ⚠️ ${target === 'frontend' ? 'Frontend' : 'Backend'} Yapısı Taranamadı\n\n`;
+      errorMarkdown += `## Sebep:\n${error.message}\n\n`;
+      
+      if (error.message.includes('403') || error.message.includes('Bad credentials')) {
+        errorMarkdown += `## Çözüm:\n\n`;
+        errorMarkdown += `Railway'de şu environment variable'ları kontrol edin:\n\n`;
+        errorMarkdown += `\`\`\`\n`;
+        errorMarkdown += `GITHUB_TOKEN=ghp_your_token_here\n`;
+        if (target === 'frontend') {
+          errorMarkdown += `GITHUB_FRONTEND_REPO=altintassoft/HzmDatabaseFrontend\n`;
+        } else {
+          errorMarkdown += `GITHUB_BACKEND_REPO=altintassoft/HzmDataBaseBackend\n`;
+        }
+        errorMarkdown += `\`\`\`\n`;
+      } else if (!process.env[`GITHUB_${target.toUpperCase()}_REPO`]) {
+        errorMarkdown += `## Çözüm:\n\n`;
+        errorMarkdown += `GITHUB_${target.toUpperCase()}_REPO environment variable tanımlı değil!\n`;
+      } else {
+        errorMarkdown += `## Detay:\n\n\`\`\`\n${error.stack}\n\`\`\`\n`;
+      }
+      
+      return {
+        type: 'markdown',
+        content: errorMarkdown,
+        reportPath: 'Error',
+        lastUpdated: new Date().toISOString(),
+        fileCount: 0,
+        note: `GitHub scan failed: ${error.message}`
       };
     }
   }
