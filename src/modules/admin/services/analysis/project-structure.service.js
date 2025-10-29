@@ -15,7 +15,7 @@ class ProjectStructureService {
       logger.info(`Scanning ${target} structure from GitHub...`);
       
       // GitHub scanner kullan
-      const GitHubScanner = require('../../compliance/configuration/scanners/github-scanner');
+      const GitHubScanner = require('../compliance/configuration/scanners/github-scanner');
       const scanner = new GitHubScanner();
       
       // Repo bilgilerini al
