@@ -8,7 +8,7 @@
 [deploy]
   # Run migrations before starting the server
   # Railway will run this command on every deploy
-  startCommand = "npm run migrate && npm start"
+  startCommand = "bash start.sh"
   
   # Restart policy
   restartPolicyType = "ON_FAILURE"
