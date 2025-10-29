@@ -1,3 +1,4 @@
+-- FORCE-RERUN
 -- ============================================================================
 -- AI KNOWLEDGE BASE - PRODUCTION SCHEMA
 -- Version: 2.0 (Security + Multi-language + Audit Enhanced)
