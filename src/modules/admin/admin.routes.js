@@ -62,6 +62,19 @@ router.post('/analyze-files', authenticateJwtOrApiKey, AdminController.analyzeFi
  */
 router.post('/generate-report', authenticateJwtOrApiKey, AdminController.generateReport);
 
+/**
+ * Get Table Data (Master Admin Panel)
+ * GET /api/v1/admin/table-data/:schema/:table
+ * 
+ * Returns raw table data with RLS bypass for admin/master_admin
+ * Shows ALL tenants' data (no tenant filtering)
+ * 
+ * Query params: limit (default: 50), offset (default: 0)
+ * 
+ * Auth: Admin or Master Admin only
+ */
+router.get('/table-data/:schema/:table', authenticateJwtOrApiKey, AdminController.getTableData);
+
 // ============================================================================
 // AI KNOWLEDGE BASE ROUTES (Master Admin Only)
 // ============================================================================

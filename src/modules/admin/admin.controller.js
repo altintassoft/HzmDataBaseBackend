@@ -663,6 +663,104 @@ class AdminController {
   }
 
   /**
+   * GET /api/v1/admin/table-data/:schema/:table
+   * Get table data with RLS bypass for admin/master_admin
+   * 
+   * Access: admin, master_admin only
+   * Returns: All tenant data (RLS bypassed)
+   */
+  static async getTableData(req, res) {
+    try {
+      const { schema, table } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+      const user = req.user;
+
+      logger.info('Table data request:', { schema, table, user: user.email, role: user.role });
+
+      // Check role: admin or master_admin only
+      const allowedRoles = ['admin', 'master_admin'];
+      if (!user.role || !allowedRoles.includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          message: 'Bu özellik sadece Admin ve Master Admin içindir'
+        });
+      }
+
+      // Validate schema and table names (prevent SQL injection)
+      const validSchemaPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+      const validTablePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+      if (!validSchemaPattern.test(schema) || !validTablePattern.test(table)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid schema or table name'
+        });
+      }
+
+      const pool = require('../../core/config/database');
+      const client = await pool.connect();
+
+      try {
+        // RLS BYPASS for admin/master_admin (show ALL tenants)
+        await client.query("SET LOCAL app.bypass_rls = 'true'");
+        await client.query("SET LOCAL app.user_id = $1", [user.id]);
+        await client.query("SET LOCAL app.user_role = $1", [user.role]);
+
+        // Get table data
+        const dataQuery = `
+          SELECT * 
+          FROM ${schema}.${table}
+          ORDER BY 
+            CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = 'created_at') 
+            THEN created_at END DESC
+          LIMIT $3 OFFSET $4
+        `;
+        const dataResult = await client.query(dataQuery, [schema, table, parseInt(limit), parseInt(offset)]);
+
+        // Get total count
+        const countQuery = `SELECT COUNT(*) as total FROM ${schema}.${table}`;
+        const countResult = await client.query(countQuery);
+
+        // Get column info
+        const columnsQuery = `
+          SELECT 
+            column_name,
+            data_type,
+            is_nullable,
+            column_default
+          FROM information_schema.columns
+          WHERE table_schema = $1 AND table_name = $2
+          ORDER BY ordinal_position
+        `;
+        const columnsResult = await client.query(columnsQuery, [schema, table]);
+
+        res.json({
+          success: true,
+          schema,
+          table,
+          total: parseInt(countResult.rows[0].total),
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          columns: columnsResult.rows,
+          rows: dataResult.rows,
+          message: `${dataResult.rows.length} kayıt gösteriliyor (Toplam: ${countResult.rows[0].total})`
+        });
+
+      } finally {
+        client.release();
+      }
+
+    } catch (error) {
+      logger.error('Failed to get table data:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
    * GET /api/v1/admin/knowledge-base-stats
    * Get knowledge base statistics
    */
