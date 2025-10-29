@@ -637,9 +637,13 @@ class AdminController {
           message: `Rapor başarıyla ${result.action === 'created' ? 'oluşturuldu' : 'güncellendi'}`,
           report: {
             id: result.report.id,
-            type: result.report.report_type,
+            report_type: result.report.report_type,
             title: result.report.title,
-            updated_at: result.report.updated_at
+            description: result.report.description,
+            content: result.report.content,
+            created_at: result.report.created_at,
+            updated_at: result.report.updated_at,
+            published_at: result.report.published_at
           }
         });
       } else {
