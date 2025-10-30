@@ -317,5 +317,398 @@ Test: User lifecycle, admin operations
 
 ---
 
-**Bu plan ihtiyaç olduğunda implemente edilebilir.**
+## 🔧 OPERASYONEL GEREKSINIMLER (Hızlı Kazançlar)
+
+### **1. Endpoint Envanteri = Tek Kaynak**
+```javascript
+// scripts/generate-endpoint-inventory.js
+// Nightly cron ile çalışır
+
+OUTPUT: /docs/api/inventory.json
+{
+  "generated_at": "2025-10-29T16:00:00Z",
+  "endpoints": [
+    {
+      "path": "/api/v1/admin/database",
+      "method": "GET",
+      "module": "admin",
+      "auth": "JWT or API Key",
+      "rls": true,
+      "deprecated": false,
+      "owner": "admin-team",
+      "lastTouched": "2025-10-28"
+    }
+  ]
+}
+
+✅ Tek kaynak (kod + döküman)
+✅ Otomatik güncelleme
+✅ CI/CD entegrasyonu
+```
+
+### **2. Deprecation Policy (Hemen Uygula)**
+```javascript
+// Pasif/duplicate endpoint'ler için:
+router.get('/api-key/*', deprecate({
+  until: '2026-03-31',
+  docUrl: 'https://.../migration-guide#api-keys',
+  redirectTo: '/api-keys/*'  // 301 Moved Permanently
+}));
+
+// Response Headers:
+Deprecation: true
+Sunset: 2026-03-31
+Link: <.../migration-guide#api-keys>; rel="deprecation"
+```
+
+### **3. Versiyon Etiketi**
+```
+Mevcut 73 endpoint → /v1/ (freeze)
+Yeni generic pattern → /v1/ (backward compatible)
+Breaking changes → /v2/ (gelecek)
+
+URL Structure:
+/api/v1/users/:id        ← Current
+/api/v2/users/:id/:action ← Future
+```
+
+### **4. Tutarlı Hata Sözleşmesi**
+```javascript
+// Standart hata formatı:
+{
+  code: "USR_NOT_FOUND",
+  message: "User not found",
+  details: { userId: "123", tenant: "acme" },
+  traceId: "uuid-trace-id"
+}
+
+// Hata katalogu:
+const ERROR_CODES = {
+  USR_NOT_FOUND: 404,
+  APIKEY_REVOKED: 403,
+  RLS_DENIED: 403,
+  INVALID_ACTION: 400,
+  IDEMPOTENCY_REQUIRED: 400,
+  CONFLICT: 409
+};
+```
+
+### **5. Idempotency + Rate Limit**
+```javascript
+// Kritik endpoint'ler için:
+POST /api-keys/:scope/:action
+POST /projects/:id/:subResource
+
+// Headers:
+Idempotency-Key: required
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1698765432
+```
+
+---
+
+## 🧭 P1 CLEANUP (Net Kontrol Listesi)
+
+### **1. Projects Pasif Endpoint'ler (9 adet):**
+```
+Adımlar:
+1. 7 günlük access log taraması (Railway/Netlify logs)
+2. 0 çağrı varsa → Kaldır
+3. >0 çağrı varsa → Deprecation header ekle, 2 hafta bekle
+
+Endpoint'ler:
+❌ GET/POST/DELETE /projects/:id/api-keys
+❌ GET/POST/GET /projects/:id/tables
+❌ GET/POST/DELETE /projects/:id/team
+```
+
+### **2. API-Key Duplicate (5 adet):**
+```
+Problem:
+/api-key/*  (5 endpoint, eski)
+/api-keys/* (9 endpoint, yeni)
+
+Çözüm:
+1. /api-key/* → 301 redirect /api-keys/*
+2. 2 hafta eşzamanlı açık tut
+3. Log monitoring (0 çağrı olunca kaldır)
+```
+
+### **3. CI Route Drift Check:**
+```bash
+# .github/workflows/route-check.yml
+
+- name: Route Drift Check
+  run: |
+    # Tanımlı ama test edilmeyen route varsa UYARI
+    npm run test:routes
+    npm run openapi-diff
+```
+
+---
+
+## 🏗️ GENERIC PATTERN GÜVENLİK ŞABLONU
+
+### **1. RBAC/RLS Matrix (Tablo):**
+```sql
+CREATE TABLE ops.endpoint_permissions (
+  module VARCHAR(50),
+  action VARCHAR(50),
+  required_roles TEXT[],
+  rls_check BOOLEAN,
+  audit_event VARCHAR(100),
+  
+  PRIMARY KEY (module, action)
+);
+
+-- Example:
+INSERT INTO ops.endpoint_permissions VALUES
+('api-keys', 'generate', ARRAY['admin', 'owner'], true, 'APIKEY_CREATED'),
+('users', 'activate', ARRAY['admin'], true, 'USER_ACTIVATED');
+```
+
+### **2. Action Router Koruması:**
+```javascript
+// Whitelist enforcement
+const ACTIONS = ['activate', 'deactivate', 'reset-password', 'send-email'] as const;
+
+app.post('/users/:id/:action', authz('users:mutate'), (req, res) => {
+  if (!ACTIONS.includes(req.params.action)) {
+    return res.status(400).json({ code: 'INVALID_ACTION' });
+  }
+  // Execute...
+});
+```
+
+### **3. SubResource Sözleşmesi:**
+```javascript
+const VALID_SUBRESOURCES = {
+  projects: ['api-keys', 'tables', 'team', 'audit'],
+  users: ['api-keys', 'permissions', 'settings', 'logs']
+};
+
+// Validation + Schema
+app.get('/projects/:id/:subResource', (req, res) => {
+  assertAllowed(req.params.subResource, VALID_SUBRESOURCES.projects);
+  // Fetch...
+});
+```
+
+---
+
+## 📐 TEST & GÖZLEMLENEBİLİRLİK
+
+### **1. Sözleşme Testleri (Contract Tests):**
+```javascript
+// Auth matrix test (her route için)
+describe('GET /users/:id', () => {
+  it('anonymous → 401', async () => {
+    await request(app).get('/users/123').expect(401);
+  });
+  
+  it('user (own) → 200', async () => {
+    await request(app).get('/users/123')
+      .set('Authorization', 'Bearer user-123-token')
+      .expect(200);
+  });
+  
+  it('user (other tenant) → 403 RLS_DENIED', async () => {
+    await request(app).get('/users/456')
+      .set('Authorization', 'Bearer user-123-token')
+      .expect(403);
+  });
+  
+  it('admin (same tenant) → 200', async () => {
+    await request(app).get('/users/456')
+      .set('Authorization', 'Bearer admin-token')
+      .expect(200);
+  });
+});
+```
+
+### **2. Audit & Trace:**
+```sql
+CREATE TABLE ops.audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id INTEGER,
+  tenant_id INTEGER,
+  scope VARCHAR(50),           -- users, projects, api-keys
+  action VARCHAR(50),          -- ACTIVATE, DEACTIVATE, CREATE
+  target VARCHAR(255),
+  ip INET,
+  user_agent TEXT,
+  trace_id UUID NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX ON ops.audit_log (tenant_id, created_at);
+CREATE INDEX ON ops.audit_log (trace_id);
+```
+
+### **3. SLO Hedefleri:**
+```
+p95 latency:
+- Read operations: < 250ms
+- Write operations: < 400ms
+
+5xx error rate: < 0.3% / gün
+
+Hata kataloğu dışı hata: 0 (CI'da yasak)
+```
+
+---
+
+## 🧪 CI/CD GATE'LERİ
+
+### **Definition of Done (Her Phase İçin):**
+```
+✅ route-inventory.json otomatik güncellendi
+✅ OpenAPI spec üretildi (openapi-diff: no breaking changes)
+✅ Contract test coverage ≥ 90% (anon/user/admin + RLS)
+✅ p95 smoke tests geçti (pre-prod)
+✅ Audit event'leri tüm mutasyonlarda var
+✅ Idempotency-Key zorunlu (POST operations)
+✅ Deprecation headers eklendi (pasif endpoint'ler)
+✅ 7 günlük access log: 0 çağrı (silinecekler için)
+```
+
+---
+
+## 📜 OPENAPI ÖRNEK (Generic Action)
+
+```yaml
+paths:
+  /users/{id}/{action}:
+    post:
+      summary: Perform an action on a user
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: action
+          in: path
+          required: true
+          schema:
+            enum: [activate, deactivate, reset-password, send-email]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserActionPayload'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/InvalidAction'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+```
+
+---
+
+## 🗺️ REFACTOR ROADMAP (UPDATED)
+
+### **Phase 0: Cleanup (1 hafta, Sıfır Risk)**
+```
+✅ Pasif 9 + duplicate 5 = 14 endpoint kaldır
+✅ Deprecation headers ekle
+✅ 301 redirects ekle
+✅ Envanter JSON + OpenAPI senkron CI
+✅ Access log monitoring
+```
+
+### **Phase 1: API Keys Generic (2 hafta, Düşük Risk)**
+```
+✅ Idempotency-Key zorunlu
+✅ Audit log zorunlu
+✅ Feature flag: apiKeysGeneric=true/false
+✅ Rollback planı hazır
+✅ Contract tests
+```
+
+### **Phase 2: Projects SubResource (3 hafta, Orta Risk)**
+```
+✅ SubResource whitelist
+✅ Schema validation (Zod/Yup)
+✅ RBAC/RLS matrix tests
+✅ Migration guide
+✅ Client SDK update
+```
+
+### **Phase 3: Users Action (2 hafta, Orta Risk)**
+```
+✅ Action whitelist
+✅ Deprecation headers (eski endpoint'ler)
+✅ 2 hafta eşzamanlı açık
+✅ Monitoring dashboard
+```
+
+---
+
+## ⚠️ DİKKAT EDİLMESİ GEREKENLER
+
+### **1. "Generic" ≠ "Kontrolsüz"**
+```
+❌ YANLIŞ:
+POST /users/:id/:action  (action: ANY)
+
+✅ DOĞRU:
+const ALLOWED_ACTIONS = ['activate', 'deactivate'] as const;
+if (!ALLOWED_ACTIONS.includes(action)) → 400 INVALID_ACTION
+```
+
+### **2. Geriye Dönük Uyum**
+```
+Minimum deprecation period: 2 hafta
+301 redirect: Eski → Yeni
+Client migration guide
+Versiyonlama support
+```
+
+### **3. Güvenlik Yüzeyi**
+```
+API-Key operations:
+- Rate limit: 100 req/hour
+- Idempotency-Key: Required
+- Audit log: Mandatory
+- RLS: Always enabled
+```
+
+---
+
+## 🎯 SONUÇ - NE YAPACAĞIZ?
+
+### **ŞİMDİ (2025 Q4):**
+```
+✅ Mevcut 73 endpoint'i koru
+✅ Bu planı hazırla (✅ YAPILDI!)
+✅ Operasyonel iyileştirmeler ekle (✅ YAPILDI!)
+```
+
+### **YAKIN GELECEK (2026 Q1):**
+```
+1. Phase 0: Cleanup (14 endpoint sil)
+2. Envanter JSON oluştur
+3. OpenAPI automation
+4. Deprecation policy uygula
+```
+
+### **ORTA VADE (2026 Q2+):**
+```
+5. Phase 1-3: Generic migration (ihtiyaç olursa)
+6. Contract tests
+7. Audit logging
+8. SLO monitoring
+```
+
+---
+
+**Bu döküman gelecek implementasyon için BLUEPRINT!**
+
 
