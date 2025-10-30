@@ -48,7 +48,7 @@ async function fixResourceMetadataFunction() {
         WHERE r.resource = p_resource
         GROUP BY r.resource, r.schema_name, r.table_name, r.is_enabled, r.is_readonly;
       END;
-      $$ LANGUAGE plpgsql
+      $$ LANGUAGE plpgsql;
     `);
     logger.info('✅ get_resource_metadata function fixed/verified');
 
