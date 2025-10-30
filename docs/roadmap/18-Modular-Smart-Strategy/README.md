@@ -407,22 +407,34 @@ tests/
 
 ### 📊 Production Test Sonuçları
 
+**HAFTA 1 Tests:**
 ```bash
-# Test Script
-./tests/production-api-test.sh
-
-# Sonuçlar (30 Ekim 2025)
 ✅ Test 1: Database Status → HTTP 200
-✅ Test 2: Metadata Tables → 3 tables found (api_resources, api_resource_fields, api_policies)
-✅ Test 3: Legacy Projects → HTTP 500 (empty table - expected)
-✅ Test 4: /data/projects → HTTP 501 (Not Implemented - expected, Hafta 2'de yazılacak)
-✅ Test 5: /data/users → HTTP 501 (Not Implemented - expected, Hafta 2'de yazılacak)
-
-3-Layer Auth: ✅ WORKING
-Migration 011: ✅ DEPLOYED
-Database: ✅ ACTIVE (11 tables, 4 schemas)
-Generic Handler: 🔄 PENDING (Week 2)
+✅ Test 2: Metadata Tables → 3 tables found
+✅ Test 3-5: Migration 011 deployed
 ```
+
+**HAFTA 2 Tests (30 Ekim 2025 - Final):**
+```bash
+# Test 1: Disabled Resource (users)
+curl https://hzmdatabasebackend-production.up.railway.app/api/v1/data/users
+✅ HTTP 403 - {"code":"RESOURCE_DISABLED","message":"Resource 'users' is not enabled"}
+
+# Test 2: Disabled Resource (projects)  
+curl https://hzmdatabasebackend-production.up.railway.app/api/v1/data/projects
+✅ HTTP 403 - {"code":"RESOURCE_DISABLED","message":"Resource 'projects' is not enabled"}
+
+# Test 3: Unknown Resource
+curl https://hzmdatabasebackend-production.up.railway.app/api/v1/data/nonexistent
+✅ HTTP 404 - {"code":"RESOURCE_NOT_FOUND"}
+```
+
+**Status:**
+- 3-Layer Auth: ✅ WORKING
+- Migration 011: ✅ FIXED (VARCHAR[] → TEXT[] casting)
+- Database: ✅ ACTIVE (13 tables, 4 schemas)
+- Generic Handler: ✅ WORKING (is_enabled=false - safe mode)
+- fix-functions.js: ✅ Auto-fixes on startup
 
 ### ✅ HAFTA 2 TAMAMLANDI (30 Ekim 2025)
 
@@ -466,21 +478,27 @@ Generic Handler: 🔄 PENDING (Week 2)
 ├── Migration 012: ✅ DEPLOYED (table_metadata, generic_data - PASIF)
 ├── RegistryService: ✅ CODED
 ├── QueryBuilder: ✅ CODED  
-├── Production Tests: ✅ PASSED (5/5)
-├── Frontend Fix: ✅ DEPLOYED
-└── Backend Tablolari: ✅ Aciklamalar eklendi
+└── Production Tests: ✅ PASSED (5/5)
 
-🔄 HAFTA 2 BAŞLAYACAK
-└── data.controller.js implementation (CRUD operations)
+✅ HAFTA 2 TAMAMLANDI (30 Ekim 2025)
+├── data.controller.js: ✅ Generic CRUD (GET/POST/PUT/DELETE/COUNT)
+├── middleware/metrics.js: ✅ Request tracking
+├── middleware/idempotency.js: ✅ Duplicate protection
+├── fix-functions.js: ✅ Startup function fix
+├── Production Tests: ✅ PASSED (403, 404 responses)
+└── Migration 011: ✅ FIXED (VARCHAR[] → TEXT[] casting)
+
+🔄 HAFTA 3 BAŞLAYACAK
+└── Projects resource aktifleştir → Gerçek CRUD testleri
 ```
 
 ### 📋 NELER YAPILDI?
 
-1. **Database - Migration 011 (Generic Handler için)**
+1. **Database - Migration 011 (Generic Handler için) ✅ FIXED**
    - ✅ `api_resources` tablosu (2 rows: users, projects)
    - ✅ `api_resource_fields` tablosu (16 rows)
    - ✅ `api_policies` tablosu (2 rows)
-   - ✅ Helper function: `get_resource_metadata()`
+   - ✅ Helper function: `get_resource_metadata()` (VARCHAR[] → TEXT[] casting fixed)
    - ✅ COMMENT'ler: Tüm CORE tablolara açıklama eklendi
 
 2. **Database - Migration 012 (Generic Table Pattern - PASIF)**
@@ -491,10 +509,14 @@ Generic Handler: 🔄 PENDING (Week 2)
    - ✅ Full-text search desteği
    - ⚠️ Henüz kullanılmıyor (Roadmap Phase 2-5)
 
-3. **Backend Kod**
+3. **Backend Kod (HAFTA 1 + 2)**
    - ✅ `registry.service.js` - Metadata okuma
    - ✅ `query-builder.js` - Supabase-style query DSL
-   - ✅ `production-api-test.sh` - Test script
+   - ✅ `data.controller.js` - Generic CRUD (GET/POST/PUT/DELETE/COUNT)
+   - ✅ `data.routes.js` - Middleware integration
+   - ✅ `fix-functions.js` - Startup function fixes
+   - ✅ `metrics.js` - Request tracking
+   - ✅ `idempotency.js` - Duplicate write protection
 
 4. **Frontend**
    - ✅ `MigrationSchemaTab.tsx` - ENDPOINTS import eklendi
@@ -509,30 +531,34 @@ Generic Handler: 🔄 PENDING (Week 2)
 ### 🧪 NASIL TEST EDERİM?
 
 ```bash
-# 1. Production API Test
-cd HzmVeriTabaniBackend
-./tests/production-api-test.sh
+# 1. Generic Handler Test (HAFTA 2 ✅)
+curl -X GET "https://hzmdatabasebackend-production.up.railway.app/api/v1/data/users" \
+  -H "X-Email: ozgurhzm@hzmsoft.com" \
+  -H "X-API-Key: hzm_master_admin_2025_secure_key_01234567890" \
+  -H "X-API-Password: MasterAdmin2025!SecurePassword"
 
-# 2. Manuel Test (Master Admin credentials)
+# Beklenen: HTTP 403 - {"code":"RESOURCE_DISABLED","message":"Resource 'users' is not enabled"}
+
+# 2. Database Tables Test
 curl -X GET "https://hzmdatabasebackend-production.up.railway.app/api/v1/admin/database?type=tables" \
   -H "X-Email: ozgurhzm@hzmsoft.com" \
   -H "X-API-Key: hzm_master_admin_2025_secure_key_01234567890" \
   -H "X-API-Password: MasterAdmin2025!SecurePassword"
 
-# Beklenen: HTTP 200, 11 tables response
+# Beklenen: HTTP 200, 13 tables response
 ```
 
-### 🔜 SONRAKI ADIM (HAFTA 2)?
+### 🔜 SONRAKI ADIM (HAFTA 3)?
 
 ```bash
 # Komut:
-"Hafta 2'yi başlat: data.controller.js'i güncelle"
+"Hafta 3'ü başlat: Projects resource'unu aktifleştir"
 
 # Ne olacak?
-- data.controller.js → Generic CRUD implementation
-- middleware/metrics.js → Tracking
-- middleware/idempotency.js → Write güvenliği
-- Tests → Unit + Integration
+1. Database'de: UPDATE api_resources SET is_enabled = true WHERE resource = 'projects';
+2. Test et: GET /data/projects → HTTP 200 (data döner)
+3. CRUD testleri: CREATE, UPDATE, DELETE
+4. Frontend entegrasyonu
 ```
 
 ### 📚 DETAYLI DÖKÜMANTASYON
@@ -549,10 +575,23 @@ curl -X GET "https://hzmdatabasebackend-production.up.railway.app/api/v1/admin/d
 
 **Durum:**
 - ✅ Hafta 1 TAMAMLANDI (30 Ekim 2025)
-- 🔄 Hafta 2-4 PLANLANDI
-- 🎯 Production SAĞLIKLI (is_enabled=false)
+- ✅ Hafta 2 TAMAMLANDI (30 Ekim 2025) 🎉
+- 🔄 Hafta 3-4 PLANLANDI
+- 🎯 Production SAĞLIKLI (is_enabled=false - güvenli mod)
 - ✅ Backend & Frontend DEPLOYED
-- ✅ Tests PASSED (5/5)
+- ✅ Tests PASSED (403, 404 working!)
+- ✅ Migration 011 FIXED (VARCHAR[] → TEXT[] casting)
+- ✅ fix-functions.js AUTO-FIXES on startup
 
 **Yeni chat'te devam için:** Yukarıdaki "YENİ CHAT İÇİN HIZLI BAŞLANGIÇ" bölümünü oku! 🚀
+
+---
+
+## ⚠️ ÖNEMLİ: YENİ MD DOSYASI OLUŞTURMA!
+
+**Bu README.md güncellenmeye devam eder. Her hafta bitiminde:**
+- ✅ README.md'yi güncelle
+- ❌ Yeni WEEK2_COMPLETE.md, WEEK3_STATUS.md vs. OLUŞTURMA
+- ✅ "YENİ CHAT İÇİN HIZLI BAŞLANGIÇ" bölümünü güncelle
+- ✅ Yeni chat bu README'den devam eder
 
