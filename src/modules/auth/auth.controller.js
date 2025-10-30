@@ -224,7 +224,7 @@ class AuthController {
       // Get user
       const result = await pool.query(
         `SELECT id, tenant_id, email, role, created_at
-         FROM core.users
+         FROM ${TABLES.USERS}
          WHERE id = $1 AND is_deleted = false`,
         [userId]
       );

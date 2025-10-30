@@ -1,5 +1,6 @@
 const { pool } = require('../../../../core/config/database');
 const logger = require('../../../../core/logger');
+const { TABLES } = require('../../../../shared/constants/tables');
 
 // Allowed schemas for security
 const ALLOWED_SCHEMAS = ['public', 'core', 'app', 'cfg', 'ops'];
@@ -44,7 +45,7 @@ class DatabaseStatsService {
       // Total users (from core.users)
       let userCount = 0;
       try {
-        const usersResult = await pool.query(`SELECT COUNT(*) as count FROM core.users;`);
+        const usersResult = await pool.query(`SELECT COUNT(*) as count FROM ${TABLES.USERS};`);
         userCount = parseInt(usersResult.rows[0].count);
       } catch (error) {
         // Table might not exist yet

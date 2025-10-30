@@ -3,6 +3,7 @@ const SyncAnalysisService = require('./services/compliance/sync-analysis.service
 const AIKnowledgeBaseService = require('./services/ai-knowledge-base.service');
 const { pool } = require('../../core/config/database');
 const { cache } = require('../../core/config/redis');
+const { TABLES } = require('../../shared/constants/tables');
 
 /**
  * Admin Controller
@@ -936,7 +937,7 @@ class AdminController {
       params.push(tenantId);
 
       const query = `
-        UPDATE core.tenants
+        UPDATE ${TABLES.TENANTS}
         SET ${updates.join(', ')}
         WHERE id = $${paramCount}
         RETURNING id, name, default_currency

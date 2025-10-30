@@ -5,6 +5,7 @@ const path = require('path');
 const MigrationParser = require('../../../../core/database/migrationParser');
 const SchemaInspector = require('../../../../core/database/schemaInspector');
 const MigrationComparator = require('../../../../core/database/migrationComparator');
+const { TABLES } = require('../../../../shared/constants/tables');
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../../../../migrations');
 
@@ -61,7 +62,7 @@ class MigrationReportService {
       let actualData = {};
       if (includes.includes('data')) {
         // Fetch sample data from core.users for INSERT comparison
-        const usersResult = await pool.query('SELECT id, email, role FROM core.users;');
+        const usersResult = await pool.query(`SELECT id, email, role FROM ${TABLES.USERS};`);
         actualData['core.users'] = usersResult.rows;
       }
 
