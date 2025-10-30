@@ -5,6 +5,7 @@ const logger = require('../core/logger');
 const { initDatabase } = require('../core/config/database');
 const { initRedis } = require('../core/config/redis');
 const runMigrations = require('../scripts/migrate');
+const { runFixes } = require('../scripts/fix-functions');
 
 // Import modular routes (NEW - Clean Architecture)
 const healthRoutes = require('../modules/health/health.routes');
@@ -88,6 +89,10 @@ const startServer = async () => {
     // Initialize database
     logger.info('Initializing database...');
     await initDatabase();
+
+    // Fix database functions (if needed)
+    logger.info('Running database function fixes...');
+    await runFixes();
 
     // Initialize Redis
     logger.info('Initializing Redis...');
