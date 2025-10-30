@@ -113,7 +113,7 @@ CREATE TRIGGER update_api_policies_updated_at
 
 -- Users tablosu
 INSERT INTO api_resources (resource, schema_name, table_name, description, is_enabled) VALUES
-('users', 'public', 'users', 'User management - authentication, profile, settings', false)
+('users', 'core', 'users', 'User management - authentication, profile, settings', false)
 ON CONFLICT (resource) DO NOTHING;
 
 -- Users fields (sadece readable olanlar)
@@ -131,7 +131,7 @@ ON CONFLICT (resource, column_name) DO NOTHING;
 
 -- Projects tablosu
 INSERT INTO api_resources (resource, schema_name, table_name, description, is_enabled) VALUES
-('projects', 'public', 'projects', 'Project management - CRUD operations', false)
+('projects', 'core', 'projects', 'Project management - CRUD operations', false)
 ON CONFLICT (resource) DO NOTHING;
 
 INSERT INTO api_resource_fields (resource, column_name, readable, writable, required, data_type, description) VALUES
