@@ -263,33 +263,21 @@ COMMENT ON FUNCTION count_table_rows IS
 -- E-commerce template için örnek tablo metadata'sı (pasif)
 -- Gerçek kullanım başladığında aktif edilecek
 
-/*
-INSERT INTO core.table_metadata (
-  tenant_id, 
-  project_id, 
-  table_name, 
-  description, 
-  fields, 
-  from_template, 
-  template_name,
-  is_active
-) VALUES (
-  1,  -- Örnek tenant_id
-  1,  -- Örnek project_id
-  'Products',
-  'E-commerce products catalog',
-  '[
-    {"name": "ProductID", "type": "integer", "required": true, "primary": true},
-    {"name": "ProductName", "type": "text", "required": true},
-    {"name": "Price", "type": "numeric", "required": true},
-    {"name": "Stock", "type": "integer", "required": false, "default": 0},
-    {"name": "Category", "type": "text", "required": false}
-  ]'::jsonb,
-  true,
-  'ecommerce',
-  false  -- Henüz aktif değil
-);
-*/
+-- COMMENTED OUT: Seed data for future use (Phase 2-5)
+-- INSERT INTO core.table_metadata (
+--   tenant_id, project_id, table_name, description, fields,
+--   from_template, template_name, is_active
+-- ) VALUES (
+--   1, 1, 'Products', 'E-commerce products catalog',
+--   '[
+--     {"name": "ProductID", "type": "integer", "required": true, "primary": true},
+--     {"name": "ProductName", "type": "text", "required": true},
+--     {"name": "Price", "type": "numeric", "required": true},
+--     {"name": "Stock", "type": "integer", "required": false, "default": 0},
+--     {"name": "Category", "type": "text", "required": false}
+--   ]'::jsonb,
+--   true, 'ecommerce', false
+-- );
 
 -- ============================================================================
 -- MIGRATION TAMAMLANDI
