@@ -358,11 +358,13 @@ Generic Handler: 🔄 PENDING (Week 2)
 
 ```
 ✅ HAFTA 1 TAMAMLANDI (30 Ekim 2025)
-├── Migration 011: ✅ DEPLOYED
+├── Migration 011: ✅ DEPLOYED (api_resources, api_resource_fields, api_policies)
+├── Migration 012: ✅ DEPLOYED (table_metadata, generic_data - PASIF)
 ├── RegistryService: ✅ CODED
 ├── QueryBuilder: ✅ CODED  
 ├── Production Tests: ✅ PASSED (5/5)
-└── Frontend Fix: ✅ DEPLOYED
+├── Frontend Fix: ✅ DEPLOYED
+└── Backend Tablolari: ✅ Aciklamalar eklendi
 
 🔄 HAFTA 2 BAŞLAYACAK
 └── data.controller.js implementation (CRUD operations)
@@ -370,24 +372,35 @@ Generic Handler: 🔄 PENDING (Week 2)
 
 ### 📋 NELER YAPILDI?
 
-1. **Database (Migration 011)**
+1. **Database - Migration 011 (Generic Handler için)**
    - ✅ `api_resources` tablosu (2 rows: users, projects)
    - ✅ `api_resource_fields` tablosu (16 rows)
    - ✅ `api_policies` tablosu (2 rows)
    - ✅ Helper function: `get_resource_metadata()`
+   - ✅ COMMENT'ler: Tüm CORE tablolara açıklama eklendi
 
-2. **Backend Kod**
+2. **Database - Migration 012 (Generic Table Pattern - PASIF)**
+   - ✅ `table_metadata` tablosu (kullanıcı tabloları için metadata)
+   - ✅ `generic_data` tablosu (tüm veri JSONB'de)
+   - ✅ RLS policies (tenant izolasyonu)
+   - ✅ Helper functions: `get_table_metadata()`, `get_table_rows()`, `count_table_rows()`
+   - ✅ Full-text search desteği
+   - ⚠️ Henüz kullanılmıyor (Roadmap Phase 2-5)
+
+3. **Backend Kod**
    - ✅ `registry.service.js` - Metadata okuma
    - ✅ `query-builder.js` - Supabase-style query DSL
    - ✅ `production-api-test.sh` - Test script
 
-3. **Frontend Fix**
+4. **Frontend**
    - ✅ `MigrationSchemaTab.tsx` - ENDPOINTS import eklendi
    - ✅ `ArchitectureComplianceTab.tsx` - ENDPOINTS import eklendi
+   - ✅ `BackendTablesTab.tsx` - Açıklama kolonu eklendi
+   - ✅ `useAIKnowledgeBase.ts` - API çağrısı düzeltildi (query parametresi)
 
-4. **Deployment**
-   - ✅ Backend: Railway (auto-deployed)
-   - ✅ Frontend: Netlify (auto-deployed)
+5. **Deployment**
+   - ✅ Backend: Railway (auto-deployed - 12 tables)
+   - ✅ Frontend: Netlify (auto-deployed - 650KB)
 
 ### 🧪 NASIL TEST EDERİM?
 
