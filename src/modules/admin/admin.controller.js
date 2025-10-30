@@ -2,6 +2,7 @@ const logger = require('../../core/logger');
 const SyncAnalysisService = require('./services/compliance/sync-analysis.service');
 const AIKnowledgeBaseService = require('./services/ai-knowledge-base.service');
 const { pool } = require('../../core/config/database');
+const { cache } = require('../../core/config/redis');
 
 /**
  * Admin Controller
@@ -24,7 +25,7 @@ class AdminController {
    */
   static async getDatabaseInfo(req, res) {
     try {
-      const { type, include, schema, table, limit, offset, target } = req.query;
+      const { type, include, schema, table, limit, offset, target, force } = req.query;
       const user = req.user;
 
       // Debug logging
@@ -35,6 +36,8 @@ class AdminController {
         table,
         limit,
         offset,
+        target,
+        force,
         fullQuery: req.query
       });
 
@@ -144,8 +147,34 @@ class AdminController {
           break;
 
         case 'project-structure':
+          if (!target || !['frontend', 'backend'].includes(target)) {
+            return res.status(400).json({ 
+              error: 'target parameter required (frontend or backend)' 
+            });
+          }
+          
+          // Cache kontrolü (1 saat TTL)
+          const structureCacheKey = `report:project-structure:${target}`;
+          
+          if (force !== 'true') {
+            const cachedStructure = await cache.get(structureCacheKey);
+            if (cachedStructure) {
+              logger.info(`✅ Cache hit: ${structureCacheKey}`);
+              return res.json({
+                ...cachedStructure,
+                cached: true,
+                cacheHit: true
+              });
+            }
+          }
+          
+          logger.info(`🔄 Cache miss or force refresh: ${structureCacheKey}`);
           const ProjectStructureService = require('./services/analysis/project-structure.service');
           result = await ProjectStructureService.getProjectStructure(target);
+          
+          // Cache'e kaydet (1 saat = 3600 saniye)
+          await cache.set(structureCacheKey, result, 3600);
+          logger.info(`💾 Cached: ${structureCacheKey} (TTL: 1h)`);
           break;
 
         case 'configuration-compliance':
@@ -154,8 +183,28 @@ class AdminController {
           break;
 
         case 'api-endpoints':
+          // Cache kontrolü (1 saat TTL)
+          const endpointsCacheKey = 'report:api-endpoints:all';
+          
+          if (force !== 'true') {
+            const cachedEndpoints = await cache.get(endpointsCacheKey);
+            if (cachedEndpoints) {
+              logger.info(`✅ Cache hit: ${endpointsCacheKey}`);
+              return res.json({
+                ...cachedEndpoints,
+                cached: true,
+                cacheHit: true
+              });
+            }
+          }
+          
+          logger.info(`🔄 Cache miss or force refresh: ${endpointsCacheKey}`);
           const ApiEndpointsService = require('./services/analysis/api-endpoints.service');
           result = await ApiEndpointsService.getApiEndpoints();
+          
+          // Cache'e kaydet (1 saat = 3600 saniye)
+          await cache.set(endpointsCacheKey, result, 3600);
+          logger.info(`💾 Cached: ${endpointsCacheKey} (TTL: 1h)`);
           break;
 
         case 'all-tables-raw':
