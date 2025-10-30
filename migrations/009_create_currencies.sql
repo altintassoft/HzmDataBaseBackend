@@ -167,7 +167,38 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
--- STEP 7: ADD DEFAULT_CURRENCY TO TENANTS TABLE
+-- STEP 7: ADD PRICING COLUMNS TO PROJECTS TABLE
+-- ============================================================================
+
+-- Add pricing-related columns to core.projects
+ALTER TABLE core.projects
+ADD COLUMN IF NOT EXISTS price NUMERIC(10, 2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS currency VARCHAR(3) REFERENCES cfg.currencies(code) DEFAULT 'TRY',
+ADD COLUMN IF NOT EXISTS pricing_plan VARCHAR(50) DEFAULT 'free',
+ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(20) DEFAULT 'monthly';
+
+-- Add indexes for pricing queries
+CREATE INDEX IF NOT EXISTS idx_projects_price ON core.projects(price);
+CREATE INDEX IF NOT EXISTS idx_projects_currency ON core.projects(currency);
+CREATE INDEX IF NOT EXISTS idx_projects_plan ON core.projects(pricing_plan);
+
+-- Add constraints
+ALTER TABLE core.projects
+ADD CONSTRAINT chk_projects_billing_cycle 
+  CHECK (billing_cycle IN ('monthly', 'yearly', 'lifetime'));
+
+ALTER TABLE core.projects
+ADD CONSTRAINT chk_projects_pricing_plan
+  CHECK (pricing_plan IN ('free', 'basic', 'premium', 'enterprise', 'custom'));
+
+-- Comments
+COMMENT ON COLUMN core.projects.price IS 'Project monthly/yearly price';
+COMMENT ON COLUMN core.projects.currency IS 'Price currency (TRY, USD, EUR, GBP)';
+COMMENT ON COLUMN core.projects.pricing_plan IS 'Pricing tier: free, basic, premium, enterprise, custom';
+COMMENT ON COLUMN core.projects.billing_cycle IS 'Billing frequency: monthly, yearly, lifetime';
+
+-- ============================================================================
+-- STEP 8: ADD DEFAULT_CURRENCY TO TENANTS TABLE
 -- ============================================================================
 
 -- Add default_currency column to core.tenants
@@ -200,5 +231,6 @@ BEGIN
   RAISE NOTICE '📊 Exchange Rates: 12 pairs initialized';
   RAISE NOTICE '🔧 Functions: get_latest_rate(), convert_currency()';
   RAISE NOTICE '🏢 Tenants: default_currency column added (TRY default)';
+  RAISE NOTICE '📦 Projects: price, currency, pricing_plan, billing_cycle columns added';
 END $$;
 
