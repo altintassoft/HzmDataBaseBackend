@@ -42,7 +42,7 @@ class AdminController {
       const ALLOWED_TYPES = [
         'tables', 'schemas', 'table', 'stats', 'users',
         'migration-report', 'migrations', 'architecture-compliance',
-        'table-comparison', 'all-tables-raw', 'endpoint-compliance',
+        'table-comparison', 'all-tables-raw',
         'plan-compliance', 'phase-progress', 'wrong-progress', 'project-structure',
         'configuration-compliance', 'api-endpoints'
       ];
@@ -126,11 +126,6 @@ class AdminController {
         case 'table-comparison':
           const TableComparisonService = require('./services/migrations/table-comparison.service');
           result = await TableComparisonService.getTableComparison();
-          break;
-
-        case 'endpoint-compliance':
-          const EndpointComplianceService = require('./services/compliance/endpoint-compliance.service');
-          result = await EndpointComplianceService.getEndpointCompliance();
           break;
 
         case 'plan-compliance':

@@ -86,6 +86,7 @@ class ApiEndpointsService {
       
       if (match) {
         const [, method, routePath] = match;
+        const fullPath = `/api/v1/${moduleName}${routePath}`;
         
         // Detect auth type
         let authType = 'Public';
@@ -98,18 +99,146 @@ class ApiEndpointsService {
         // Detect if commented out
         const isCommented = line.trim().startsWith('//');
         
+        // ✨ COMPLIANCE CHECKS
+        const compliance = this.checkEndpointCompliance(fullPath, method.toUpperCase(), authType, moduleName);
+        
         endpoints.push({
           module: moduleName,
           method: method.toUpperCase(),
-          path: `/api/v1/${moduleName}${routePath}`,
+          path: fullPath,
           authType,
           status: isCommented ? 'disabled' : 'active',
+          
+          // Compliance fields
+          strategyCompliant: compliance.strategyCompliant,
+          namingCompliant: compliance.namingCompliant,
+          authCompliant: compliance.authCompliant,
+          complianceScore: compliance.score,
+          issues: compliance.issues,
+          recommendations: compliance.recommendations,
+          
           raw: line.trim()
         });
       }
     }
     
     return endpoints;
+  }
+  
+  /**
+   * Check endpoint compliance with SMART_ENDPOINT_STRATEGY_V2
+   */
+  static checkEndpointCompliance(path, method, authType, moduleName) {
+    const issues = [];
+    const recommendations = [];
+    let score = 100;
+    
+    // 1. Naming Convention Check
+    const namingCompliant = this.checkNaming(path, method);
+    if (!namingCompliant.valid) {
+      issues.push(namingCompliant.issue);
+      recommendations.push(namingCompliant.recommendation);
+      score -= 25;
+    }
+    
+    // 2. Strategy Check (RESTful vs RPC)
+    const strategyCompliant = this.checkStrategy(path, method, moduleName);
+    if (!strategyCompliant.valid) {
+      issues.push(strategyCompliant.issue);
+      recommendations.push(strategyCompliant.recommendation);
+      score -= 25;
+    }
+    
+    // 3. Auth Check (doğru auth tipi mi?)
+    const authCompliant = this.checkAuth(path, authType, moduleName);
+    if (!authCompliant.valid) {
+      issues.push(authCompliant.issue);
+      recommendations.push(authCompliant.recommendation);
+      score -= 25;
+    }
+    
+    return {
+      strategyCompliant: strategyCompliant.valid,
+      namingCompliant: namingCompliant.valid,
+      authCompliant: authCompliant.valid,
+      score: Math.max(0, score),
+      issues,
+      recommendations
+    };
+  }
+  
+  /**
+   * Check naming convention
+   */
+  static checkNaming(path, method) {
+    // RESTful naming: /resource/:id (good)
+    // RPC naming: /getUser (bad)
+    
+    const pathParts = path.split('/').filter(p => p);
+    const lastPart = pathParts[pathParts.length - 1];
+    
+    // Check for verbs in path (getUser, createProject, etc)
+    const verbs = ['get', 'create', 'update', 'delete', 'fetch', 'save', 'load', 'find'];
+    const hasVerb = verbs.some(verb => lastPart.toLowerCase().startsWith(verb));
+    
+    if (hasVerb) {
+      return {
+        valid: false,
+        issue: `Verb in URL: ${lastPart}`,
+        recommendation: `Use RESTful naming: ${method} /resource instead of ${method} /${lastPart}`
+      };
+    }
+    
+    return { valid: true };
+  }
+  
+  /**
+   * Check RESTful strategy
+   */
+  static checkStrategy(path, method, moduleName) {
+    // Smart endpoints: /data/:resource (generic)
+    // Individual endpoints: /auth/login (specific)
+    
+    if (path.includes(':resource') || path.includes(':entity')) {
+      // Smart endpoint
+      return { valid: true, type: 'smart' };
+    }
+    
+    // Individual endpoint (OK for auth, admin, etc)
+    if (['auth', 'admin', 'health'].includes(moduleName)) {
+      return { valid: true, type: 'individual' };
+    }
+    
+    return { valid: true, type: 'individual' };
+  }
+  
+  /**
+   * Check auth type appropriateness
+   */
+  static checkAuth(path, authType, moduleName) {
+    // Public endpoints: only /auth/*, /health/*
+    if (authType === 'Public') {
+      if (!path.includes('/auth/') && !path.includes('/health/')) {
+        return {
+          valid: false,
+          issue: 'Public endpoint outside auth/health',
+          recommendation: 'Add authentication (JWT or API Key)'
+        };
+      }
+    }
+    
+    // Admin endpoints should have admin auth
+    if (path.includes('/admin/')) {
+      if (!authType.includes('JWT')) {
+        return {
+          valid: false,
+          issue: 'Admin endpoint without JWT auth',
+          recommendation: 'Use JWT authentication for admin endpoints'
+        };
+      }
+    }
+    
+    return { valid: true };
   }
 }
 
