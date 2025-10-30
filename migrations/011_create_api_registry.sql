@@ -193,6 +193,27 @@ COMMENT ON TABLE api_policies IS 'Row-level security policies for generic handle
 COMMENT ON FUNCTION get_resource_metadata IS 'Get full metadata for a resource (helper for generic handler)';
 
 -- ============================================================================
+-- TABLE DESCRIPTIONS - Tüm Mevcut Tablolar
+-- ============================================================================
+-- Frontend'de Backend Tabloları sayfasında açıklamalar görünsün diye
+
+-- cfg schema
+COMMENT ON TABLE cfg.currencies IS 'Currency definitions for multi-currency support - ISO codes, symbols, and display formats';
+COMMENT ON TABLE cfg.exchange_rates IS 'Real-time exchange rates between currencies - automatic daily updates from external API';
+
+-- core schema
+COMMENT ON TABLE core.projects IS 'Project management - CRUD operations for business projects with tenant isolation';
+COMMENT ON TABLE core.tenants IS 'Multi-tenant isolation - organization/company data with subscription and settings';
+COMMENT ON TABLE core.users IS 'User accounts - authentication, profile management, roles, and API key storage';
+
+-- ops schema
+COMMENT ON TABLE ops.ai_knowledge_base IS 'AI-powered knowledge base - stores generated backend reports (tables, migrations, architecture)';
+COMMENT ON TABLE ops.ai_knowledge_base_audit IS 'Audit log for AI knowledge base - tracks all report generation, updates, and access history';
+
+-- public schema
+COMMENT ON TABLE public.schema_migrations IS 'Migration tracking - records all executed database migrations with checksums and timestamps';
+
+-- ============================================================================
 -- MIGRATION TAMAMLANDI
 -- ============================================================================
 -- ✅ 3 tablo oluşturuldu: api_resources, api_resource_fields, api_policies
