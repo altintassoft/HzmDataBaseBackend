@@ -88,13 +88,13 @@ class ApiEndpointsService {
         const [, method, routePath] = match;
         const fullPath = `/api/v1/${moduleName}${routePath}`;
         
-        // Detect auth type
+        // Detect auth type (en spesifikten en genele)
         let authType = 'Public';
-        if (line.includes('authenticateJwtOrApiKey')) authType = 'JWT or API Key';
+        if (line.includes('requireMasterAdmin')) authType = 'JWT (Master Admin)';
+        else if (line.includes('requireAdmin')) authType = 'JWT (Admin)';
+        else if (line.includes('authenticateJwtOrApiKey')) authType = 'JWT or API Key';
         else if (line.includes('authenticateJWT')) authType = 'JWT';
         else if (line.includes('authenticateApiKey')) authType = 'API Key';
-        else if (line.includes('requireAdmin')) authType = 'JWT (Admin)';
-        else if (line.includes('requireMasterAdmin')) authType = 'JWT (Master Admin)';
         
         // Detect if commented out
         const isCommented = line.trim().startsWith('//');
