@@ -11,7 +11,7 @@
  * - Supports JSON and YAML output
  */
 
-const db = require('../../../core/database');
+const { pool } = require('../../../core/config/database');
 const logger = require('../../../core/logger');
 
 class OpenAPIGeneratorService {
@@ -132,7 +132,7 @@ class OpenAPIGeneratorService {
       ORDER BY r.resource;
     `;
 
-    const result = await db.query(query);
+    const result = await pool.query(query);
     return result.rows;
   }
 
