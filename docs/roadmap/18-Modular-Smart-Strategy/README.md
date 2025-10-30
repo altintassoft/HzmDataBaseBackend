@@ -150,6 +150,38 @@ npm test tests/registry.test.js
 
 ---
 
+## ⚠️ ÖNEMLİ PRENSİPLER - OKUMADAN DEVAM ETME!
+
+### 🚫 HATALI MIGRATION → YENİ MIGRATION DEĞİL!
+
+**YANLIŞ YAKLAŞIM:**
+```
+❌ Migration 011 hatası var → Migration 013 oluştur (düzeltme için)
+❌ Hızlı çözüm (geçici workaround)
+❌ Migration sayısı şişer → 50+ migration dosyası kaosu
+```
+
+**DOĞRU YAKLAŞIM:**
+```
+✅ Migration 011 hatası var → Migration 011'i DÜZELT
+✅ Kalıcı çözüm (root cause fix)
+✅ Migration sistemi temiz kalır
+✅ Her migration %100 doğru çalışmalı
+```
+
+**NEDEN ÖNEMLİ?**
+- Migration sistemi **TEK KAYNAK GERÇEK** (single source of truth)
+- Yeni deployment → tüm migration'lar sıfırdan çalışır
+- Hatalı migration 011 + Düzeltme 013 = **TEKNİK BORÇ**
+- 50+ migration → bakım çilesi, bug riski
+
+**NE ZAMAN DÜZELTMELİ?**
+- ✅ Henüz production'da kullanılmadıysa → Hemen düzelt
+- ✅ Syntax hatası, tip uyumsuzluğu → Hemen düzelt
+- ❌ Production'da aktif veri varsa → Migration 013 oluştur (geri dönülemez)
+
+---
+
 ## ✅ Kritik Kararlar
 
 ### 29 Ekim 2025
