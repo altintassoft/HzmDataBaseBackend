@@ -116,33 +116,39 @@ INSERT INTO api_resources (resource, schema_name, table_name, description, is_en
 ('users', 'core', 'users', 'User management - authentication, profile, settings', false)
 ON CONFLICT (resource) DO NOTHING;
 
--- Users fields (sadece readable olanlar)
+-- Users fields (REAL columns from core.users table)
 INSERT INTO api_resource_fields (resource, column_name, readable, writable, required, data_type, description) VALUES
-('users', 'id', true, false, false, 'integer', 'User ID'),
-('users', 'email', true, true, true, 'text', 'Email address'),
-('users', 'first_name', true, true, false, 'text', 'First name'),
-('users', 'last_name', true, true, false, 'text', 'Last name'),
-('users', 'role', true, false, false, 'text', 'User role'),
-('users', 'is_active', true, false, false, 'boolean', 'Account status'),
-('users', 'created_at', true, false, false, 'timestamp', 'Account creation date'),
-('users', 'updated_at', true, false, false, 'timestamp', 'Last update date')
+('users', 'id', true, false, false, 'integer', 'User ID (auto-generated)'),
+('users', 'tenant_id', true, false, true, 'integer', 'Tenant ID (auto-set from context)'),
+('users', 'email', true, true, true, 'text', 'Email address (unique per tenant)'),
+('users', 'role', true, false, false, 'text', 'User role (user, admin, master_admin)'),
+('users', 'is_active', true, false, false, 'boolean', 'Account active status'),
+('users', 'is_deleted', true, false, false, 'boolean', 'Soft delete flag'),
+('users', 'deleted_at', true, false, false, 'timestamp', 'Deletion timestamp'),
+('users', 'version', true, false, false, 'integer', 'Optimistic locking version'),
+('users', 'created_at', true, false, false, 'timestamp', 'Account creation timestamp'),
+('users', 'updated_at', true, false, false, 'timestamp', 'Last update timestamp')
 ON CONFLICT (resource, column_name) DO NOTHING;
--- NOT: password_hash, api_key gibi hassas alanlar EXCLUDED (readable=false, writable=false)
+-- NOTE: password_hash is EXCLUDED (security - never expose passwords)
 
 -- Projects tablosu
 INSERT INTO api_resources (resource, schema_name, table_name, description, is_enabled) VALUES
 ('projects', 'core', 'projects', 'Project management - CRUD operations', false)
 ON CONFLICT (resource) DO NOTHING;
 
+-- Projects fields (REAL columns from core.projects table)
 INSERT INTO api_resource_fields (resource, column_name, readable, writable, required, data_type, description) VALUES
-('projects', 'id', true, false, false, 'integer', 'Project ID'),
-('projects', 'tenant_id', true, false, true, 'integer', 'Tenant ID (auto-set)'),
-('projects', 'name', true, true, true, 'text', 'Project name'),
+('projects', 'id', true, false, false, 'integer', 'Project ID (auto-generated)'),
+('projects', 'tenant_id', true, false, true, 'integer', 'Tenant ID (auto-set from context)'),
+('projects', 'name', true, true, true, 'text', 'Project name (unique per tenant)'),
 ('projects', 'description', true, true, false, 'text', 'Project description'),
-('projects', 'status', true, true, false, 'text', 'Project status'),
-('projects', 'settings', true, true, false, 'json', 'Project settings'),
-('projects', 'created_at', true, false, false, 'timestamp', 'Creation date'),
-('projects', 'updated_at', true, false, false, 'timestamp', 'Last update date')
+('projects', 'status', true, true, false, 'text', 'Project status (active, inactive, archived, completed)'),
+('projects', 'created_at', true, false, false, 'timestamp', 'Project creation timestamp'),
+('projects', 'updated_at', true, false, false, 'timestamp', 'Last update timestamp'),
+('projects', 'created_by', true, false, false, 'integer', 'User who created the project'),
+('projects', 'is_deleted', true, false, false, 'boolean', 'Soft delete flag'),
+('projects', 'deleted_at', true, false, false, 'timestamp', 'Deletion timestamp'),
+('projects', 'deleted_by', true, false, false, 'integer', 'User who deleted the project')
 ON CONFLICT (resource, column_name) DO NOTHING;
 
 -- RLS Policy örneği (tenant isolation)
