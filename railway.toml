@@ -6,9 +6,9 @@
   builder = "NIXPACKS"
 
 [deploy]
-  # Run migrations before starting the server
+  # Start the server (migrations run inside server.js startup)
   # Railway will run this command on every deploy
-  startCommand = "npm run migrate && npm start"
+  startCommand = "npm start"
   
   # Restart policy
   restartPolicyType = "ON_FAILURE"
