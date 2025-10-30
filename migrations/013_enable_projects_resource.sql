@@ -42,8 +42,10 @@ END $$;
 -- Show all resources status
 SELECT 
   resource,
+  schema_name,
+  table_name,
   is_enabled,
-  rate_limit,
+  is_readonly,
   updated_at
 FROM api_resources
 ORDER BY resource;
