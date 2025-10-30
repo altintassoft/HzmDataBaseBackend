@@ -17,11 +17,12 @@ async function fixResourceMetadataFunction() {
   try {
     logger.info('Checking get_resource_metadata function...');
 
-    const fixSQL = `
-      -- Drop old function (if exists)
-      DROP FUNCTION IF EXISTS get_resource_metadata(TEXT);
+    // Step 1: Drop old function
+    await pool.query(`DROP FUNCTION IF EXISTS get_resource_metadata(TEXT)`);
+    logger.info('🗑️  Dropped old function');
 
-      -- Create corrected function
+    // Step 2: Create corrected function
+    await pool.query(`
       CREATE OR REPLACE FUNCTION get_resource_metadata(p_resource TEXT)
       RETURNS TABLE(
         resource VARCHAR(100),
@@ -47,10 +48,8 @@ async function fixResourceMetadataFunction() {
         WHERE r.resource = p_resource
         GROUP BY r.resource, r.schema_name, r.table_name, r.is_enabled, r.is_readonly;
       END;
-      $$ LANGUAGE plpgsql;
-    `;
-
-    await pool.query(fixSQL);
+      $$ LANGUAGE plpgsql
+    `);
     logger.info('✅ get_resource_metadata function fixed/verified');
 
   } catch (error) {
