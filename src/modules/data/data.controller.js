@@ -1,6 +1,6 @@
 const RegistryService = require('./services/registry.service');
 const QueryBuilder = require('./utils/query-builder');
-const pool = require('../../core/database/pool');
+const { pool } = require('../../core/config/database');
 const logger = require('../../core/logger');
 
 /**
