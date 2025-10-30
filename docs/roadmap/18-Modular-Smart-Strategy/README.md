@@ -167,28 +167,35 @@ npm test tests/registry.test.js
 
 ## 🎯 Başarı Kriterleri
 
-### Hafta 1 (Metadata Temeli) ✅
+### Hafta 1 (Metadata Temeli) ✅ TAMAMLANDI
 - [x] Migration dosyası oluşturuldu (`011_create_api_registry.sql`)
 - [x] RegistryService oluşturuldu
 - [x] QueryBuilder oluşturuldu
 - [x] Test dosyaları hazır
-- [ ] Migration çalıştırıldı (DATABASE_URL gerekli)
-- [ ] Database'de tablolar kontrol edildi
+- [x] Migration çalıştırıldı (Railway auto-deploy)
+- [x] Database'de tablolar kontrol edildi
 
-### Hafta 2-4 (Generic Handler) 🔄
-- [ ] Metadata katmanı çalışıyor
-- [ ] Generic handler CRUD yapıyor
-- [ ] Filtreleme/sıralama/pagination çalışıyor
-- [ ] RLS/Policy uygulanıyor
+### Hafta 2 (Generic Handler) ✅ TAMAMLANDI
+- [x] Metadata katmanı çalışıyor (RegistryService)
+- [x] Generic handler CRUD yapıyor (data.controller.js)
+- [x] Filtreleme/sıralama/pagination çalışıyor (QueryBuilder)
+- [x] RLS/Policy uygulanıyor (tenant_id filtresi)
+- [x] Metrics topluyoruz (metrics.js middleware)
+- [x] Idempotency protection (idempotency.js middleware)
+- [x] Integration tests yazıldı
+
+### Hafta 3-4 (Canary + Scale) 🔄 PLANLANDI
+- [ ] Projects resource aktifleştir (is_enabled=true)
+- [ ] Gerçek verilerle test et
 - [ ] OpenAPI otomatik üretiliyor
-- [ ] Metrics topluyoruz
+- [ ] Tüm resources'ı migrate et
 
 ### Business (Genel)
-- [x] Hiçbir endpoint bozulmadı (Hafta 1 sıfır risk)
+- [x] Hiçbir endpoint bozulmadı (Hafta 1 + 2 sıfır risk)
 - [x] Frontend etkilenmedi (henüz değişiklik yok)
-- [ ] Yeni tablo eklemek 5 dakika
-- [ ] Dokümantasyon otomatik güncel
-- [ ] 400+ endpoint kaosu önlendi
+- [ ] Yeni tablo eklemek 5 dakika (Hafta 3'te test edilecek)
+- [ ] Dokümantasyon otomatik güncel (Hafta 4)
+- [ ] 400+ endpoint kaosu önlendi (✅ Çözüm hazır)
 
 ---
 
@@ -226,7 +233,16 @@ A: ŞİMDİ ALTINSAAT! Daha 53 endpoint'tayız. 1 ay sonra Phase 2-5 başlarsa �
 > **Durum:** ✅ TAMAMLANDI (30 Ekim 2025)  
 > **Production:** ✅ Backend deployed, ✅ Frontend deployed  
 > **Tests:** ✅ PASSED (5/5 test cases)  
-> **Sonraki:** Hafta 2 - DataController implementation
+> **Sonraki:** ✅ Hafta 2 TAMAMLANDI (30 Ekim 2025)
+
+---
+
+## 📦 HAFTA 2 İLERLEME DURUMU
+
+> **Durum:** ✅ TAMAMLANDI (30 Ekim 2025)  
+> **Implementation:** ✅ Generic CRUD, ✅ Middleware, ✅ Tests  
+> **Production:** 🔄 PASIF (is_enabled=false - güvenli)  
+> **Sonraki:** Hafta 3 - Canary Test (projects resource aktifleştirme)
 
 ---
 
@@ -287,6 +303,17 @@ migrations/011_create_api_registry.sql
 #### 2. Backend Services
 ```
 src/modules/data/
+├── data.controller.js              → Generic CRUD Controller ✅ UPDATED (Week 2)
+│   ├── list()                      → GET /data/:resource
+│   ├── getById()                   → GET /data/:resource/:id
+│   ├── create()                    → POST /data/:resource
+│   ├── update()                    → PUT /data/:resource/:id
+│   ├── delete()                    → DELETE /data/:resource/:id
+│   ├── count()                     → GET /data/:resource/count
+│   └── search()                    → POST /data/:resource/search
+│
+├── data.routes.js                  → Routes with middleware ✅ UPDATED (Week 2)
+│
 ├── services/
 │   └── registry.service.js         → Metadata okuma servisi
 │       ├── getResourceMeta()       → Resource metadata getir
@@ -302,20 +329,49 @@ src/modules/data/
         └── buildSelect()           → SELECT columns
 ```
 
-#### 3. Tests
+#### 3. Middleware ✅ NEW (Week 2)
 ```
-tests/registry.test.js              → Unit tests (6 test case)
-└── Test: Disabled resources (is_enabled=false kontrolü)
+src/middleware/
+├── metrics.js                      → Request tracking
+│   ├── trackRequest()              → Middleware
+│   ├── getMetrics()                → Stats
+│   └── getTopResources()           → Top used resources
+│
+└── idempotency.js                  → Duplicate write protection
+    ├── checkIdempotency()          → Middleware
+    ├── getCacheStats()             → Cache stats
+    └── clearCache()                → Clear cache
 ```
 
-### ⏳ Bekleyen İşler
+#### 4. Tests ✅ NEW (Week 2)
+```
+tests/
+├── registry.test.js                → Unit tests (6 test case)
+└── data-controller.test.js         → Integration tests (Week 2)
+    ├── Disabled resources (403)
+    ├── Unknown resources (404)
+    ├── Authentication (401)
+    ├── Idempotency (409)
+    ├── Metrics tracking
+    └── Query parameters
+```
 
+### ✅ Tamamlanan İşler (HAFTA 1 + HAFTA 2)
+
+**HAFTA 1:**
 - [x] **Migration çalıştır** ✅ DEPLOYED (Railway otomatik)
 - [x] **Database'de tablolar kontrol et** ✅ VERIFIED
   - api_resources: 2 rows (users, projects)
   - api_resource_fields: 16 rows
   - api_policies: 2 rows
 - [x] **Production API Tests** ✅ PASSED (./tests/production-api-test.sh)
+
+**HAFTA 2 (30 Ekim 2025):**
+- [x] **data.controller.js** - Generic CRUD implementation ✅ COMPLETED
+- [x] **middleware/metrics.js** - Request tracking ✅ COMPLETED
+- [x] **middleware/idempotency.js** - Duplicate write protection ✅ COMPLETED
+- [x] **data.routes.js** - Middleware integration ✅ COMPLETED
+- [x] **data-controller.test.js** - Integration tests ✅ COMPLETED
 
 ### 📊 Production Test Sonuçları
 
@@ -336,15 +392,31 @@ Database: ✅ ACTIVE (11 tables, 4 schemas)
 Generic Handler: 🔄 PENDING (Week 2)
 ```
 
-### 🔜 Sonraki Hafta (Hafta 2)
+### ✅ HAFTA 2 TAMAMLANDI (30 Ekim 2025)
 
-**Hedef:** Generic handler implementation (pasif mod)
+**Hedef:** Generic handler implementation (pasif mod) ✅
 
-**Oluşturulacaklar:**
-- `data.controller.js` güncelleme (CRUD operations)
-- `middleware/metrics.js` (tracking)
-- `middleware/idempotency.js` (write güvenliği)
-- Tests
+**Oluşturulanlar:**
+- ✅ `data.controller.js` - Generic CRUD (GET/POST/PUT/DELETE/COUNT)
+- ✅ `middleware/metrics.js` - Request tracking & monitoring
+- ✅ `middleware/idempotency.js` - Duplicate write protection
+- ✅ `data.routes.js` - Middleware integration
+- ✅ `tests/data-controller.test.js` - Integration tests
+
+**Güvenlik:**
+- ✅ is_enabled=false kontrolü (tüm resources pasif)
+- ✅ Mevcut sistem bozulmadı
+- ✅ Frontend etkilenmedi
+
+### 🔜 Sonraki Hafta (Hafta 3)
+
+**Hedef:** Canary Test - İlk resource aktifleştir
+
+**Yapılacaklar:**
+- Projects resource'unu aktifleştir (is_enabled=true)
+- Gerçek verilerle test et
+- Frontend entegrasyonu
+- Monitoring & metrics
 
 ---
 
