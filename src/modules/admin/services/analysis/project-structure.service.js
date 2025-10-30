@@ -47,8 +47,8 @@ class ProjectStructureService {
       
       files.slice(0, 200).forEach((file, index) => {
         const fileName = file.path.split('/').pop();
-        // Satır tahmini (size / 50 bytes per line)
-        const estimatedLines = file.size ? Math.round(file.size / 50) : 0;
+        // Satır tahmini (size / 35 bytes per line, daha doğru)
+        const estimatedLines = file.size ? Math.round(file.size / 35) : 0;
         
         let status = '✅ İyi';
         if (estimatedLines >= 900) status = '🔴🔴🔴 Kritik';
