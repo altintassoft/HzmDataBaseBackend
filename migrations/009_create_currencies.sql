@@ -167,6 +167,29 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
+-- STEP 7: ADD DEFAULT_CURRENCY TO TENANTS TABLE
+-- ============================================================================
+
+-- Add default_currency column to core.tenants
+ALTER TABLE core.tenants 
+ADD COLUMN IF NOT EXISTS default_currency VARCHAR(3) 
+  REFERENCES cfg.currencies(code) 
+  DEFAULT 'TRY';
+
+-- Update existing tenants to use TRY
+UPDATE core.tenants 
+SET default_currency = 'TRY' 
+WHERE default_currency IS NULL;
+
+-- Make it NOT NULL after setting defaults
+ALTER TABLE core.tenants 
+ALTER COLUMN default_currency SET NOT NULL;
+
+-- Index for quick currency lookup
+CREATE INDEX IF NOT EXISTS idx_tenants_currency 
+ON core.tenants(default_currency);
+
+-- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================
 
@@ -176,5 +199,6 @@ BEGIN
   RAISE NOTICE '💱 Currencies: 4 (TRY, USD, EUR, GBP)';
   RAISE NOTICE '📊 Exchange Rates: 12 pairs initialized';
   RAISE NOTICE '🔧 Functions: get_latest_rate(), convert_currency()';
+  RAISE NOTICE '🏢 Tenants: default_currency column added (TRY default)';
 END $$;
 
