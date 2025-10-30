@@ -44,7 +44,7 @@ class AdminController {
         'migration-report', 'migrations', 'architecture-compliance',
         'table-comparison', 'all-tables-raw', 'endpoint-compliance',
         'plan-compliance', 'phase-progress', 'wrong-progress', 'project-structure',
-        'configuration-compliance'
+        'configuration-compliance', 'api-endpoints'
       ];
 
       if (!type || !ALLOWED_TYPES.includes(type)) {
@@ -156,6 +156,11 @@ class AdminController {
         case 'configuration-compliance':
           const ConfigurationComplianceService = require('./services/compliance/configuration');
           result = await ConfigurationComplianceService.getFullCompliance();
+          break;
+
+        case 'api-endpoints':
+          const ApiEndpointsService = require('./services/analysis/api-endpoints.service');
+          result = await ApiEndpointsService.getApiEndpoints();
           break;
 
         case 'all-tables-raw':
