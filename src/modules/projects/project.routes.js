@@ -65,25 +65,6 @@ router.delete('/:id', authenticateApiKey, ProjectController.delete);
  */
 router.get('/:id/statistics', authenticateApiKey, ProjectController.getStatistics);
 
-// ============================================================================
-// FUTURE ROUTES (Commented out - to be implemented)
-// ============================================================================
-
-// Project API Keys Management
-// router.get('/:id/api-keys', authenticateApiKey, ProjectApiKeyController.list);
-// router.post('/:id/api-keys', authenticateApiKey, ProjectApiKeyController.create);
-// router.delete('/:id/api-keys/:keyId', authenticateApiKey, ProjectApiKeyController.revoke);
-
-// Project Tables Management
-// router.get('/:id/tables', authenticateApiKey, ProjectTableController.list);
-// router.post('/:id/tables', authenticateApiKey, ProjectTableController.create);
-// router.get('/:id/tables/:tableId', authenticateApiKey, ProjectTableController.getById);
-
-// Project Team Management (Phase 2)
-// router.get('/:id/team', authenticateApiKey, ProjectTeamController.list);
-// router.post('/:id/team', authenticateApiKey, ProjectTeamController.addMember);
-// router.delete('/:id/team/:memberId', authenticateApiKey, ProjectTeamController.removeMember);
-
 module.exports = router;
 
 
