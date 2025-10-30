@@ -22,26 +22,9 @@ class RegistryService {
    */
   static async getResourceMeta(resource) {
     try {
-      // Direct SQL query (function'dan daha güvenilir)
+      // Use fixed function (VARCHAR types corrected)
       const result = await pool.query(
-        `SELECT 
-          r.resource,
-          r.schema_name,
-          r.table_name,
-          r.is_enabled,
-          r.is_readonly,
-          COALESCE(
-            ARRAY_AGG(f.column_name) FILTER (WHERE f.readable = true), 
-            ARRAY[]::text[]
-          ) AS readable_columns,
-          COALESCE(
-            ARRAY_AGG(f.column_name) FILTER (WHERE f.writable = true),
-            ARRAY[]::text[]
-          ) AS writable_columns
-        FROM api_resources r
-        LEFT JOIN api_resource_fields f ON f.resource = r.resource
-        WHERE r.resource = $1
-        GROUP BY r.resource, r.schema_name, r.table_name, r.is_enabled, r.is_readonly`,
+        `SELECT * FROM get_resource_metadata($1)`,
         [resource]
       );
 

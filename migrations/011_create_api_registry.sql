@@ -156,11 +156,13 @@ ON CONFLICT (resource, policy_name) DO NOTHING;
 -- ============================================================================
 
 -- Bir resource'un metadata'sını döndür
+DROP FUNCTION IF EXISTS get_resource_metadata(TEXT);
+
 CREATE OR REPLACE FUNCTION get_resource_metadata(p_resource TEXT)
 RETURNS TABLE(
-  resource VARCHAR,
-  schema_name VARCHAR,
-  table_name VARCHAR,
+  resource VARCHAR(100),
+  schema_name VARCHAR(50),
+  table_name VARCHAR(100),
   is_enabled BOOLEAN,
   is_readonly BOOLEAN,
   readable_columns TEXT[],
@@ -169,13 +171,13 @@ RETURNS TABLE(
 BEGIN
   RETURN QUERY
   SELECT 
-    r.resource,
-    r.schema_name,
-    r.table_name,
+    r.resource::VARCHAR(100),
+    r.schema_name::VARCHAR(50),
+    r.table_name::VARCHAR(100),
     r.is_enabled,
     r.is_readonly,
-    ARRAY_AGG(f.column_name) FILTER (WHERE f.readable = true) AS readable_columns,
-    ARRAY_AGG(f.column_name) FILTER (WHERE f.writable = true) AS writable_columns
+    COALESCE(ARRAY_AGG(f.column_name) FILTER (WHERE f.readable = true), ARRAY[]::text[]) AS readable_columns,
+    COALESCE(ARRAY_AGG(f.column_name) FILTER (WHERE f.writable = true), ARRAY[]::text[]) AS writable_columns
   FROM api_resources r
   LEFT JOIN api_resource_fields f ON f.resource = r.resource
   WHERE r.resource = p_resource
