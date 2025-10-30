@@ -62,12 +62,12 @@ class ProjectStructureService {
       if (files.length > 200) {
         markdown += `\n_... ve ${files.length - 200} dosya daha_\n`;
       }
-      
-      return {
-        type: 'markdown',
+          
+          return {
+            type: 'markdown',
         content: markdown,
         reportPath: `GitHub: ${owner}/${repo}`,
-        lastUpdated: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
         fileCount: files.length,
         note: `GitHub scan - ${files.length} files`
       };
@@ -96,7 +96,7 @@ class ProjectStructureService {
       } else {
         errorMarkdown += `## Detay:\n\n\`\`\`\n${error.stack}\n\`\`\`\n`;
       }
-      
+
       return {
         type: 'markdown',
         content: errorMarkdown,

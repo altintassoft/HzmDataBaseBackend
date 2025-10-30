@@ -873,7 +873,7 @@ class AIKnowledgeBaseService {
       
       if (!fullPath.startsWith(allowedPath)) {
         return { 
-          success: false, 
+        success: false,
           error: 'Invalid path. Only files in docs/roadmap/ are allowed.' 
         };
       }

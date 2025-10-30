@@ -1,5 +1,6 @@
 const { pool } = require('../../core/config/database');
 const logger = require('../../core/logger');
+const { TABLES } = require('../../shared/constants/tables');
 
 /**
  * Project Model - Database Access Layer
@@ -27,7 +28,7 @@ class ProjectModel {
           updated_at,
           created_by,
           updated_by
-        FROM core.projects
+        FROM ${TABLES.PROJECTS}
         WHERE owner_id = $1 AND tenant_id = $2
         ORDER BY created_at DESC
       `, [userId, tenantId]);
@@ -51,8 +52,8 @@ class ProjectModel {
           p.*,
           u.email as owner_email,
           u.name as owner_name
-        FROM core.projects p
-        LEFT JOIN core.users u ON p.owner_id = u.id
+        FROM ${TABLES.PROJECTS} p
+        LEFT JOIN ${TABLES.USERS} u ON p.owner_id = u.id
         WHERE p.tenant_id = $1
         ORDER BY p.created_at DESC
       `, [tenantId]);
@@ -77,8 +78,8 @@ class ProjectModel {
           p.*,
           u.email as owner_email,
           u.name as owner_name
-        FROM core.projects p
-        LEFT JOIN core.users u ON p.owner_id = u.id
+        FROM ${TABLES.PROJECTS} p
+        LEFT JOIN ${TABLES.USERS} u ON p.owner_id = u.id
         WHERE p.id = $1 AND p.tenant_id = $2
       `, [projectId, tenantId]);
 
@@ -99,7 +100,7 @@ class ProjectModel {
 
     try {
       const result = await pool.query(`
-        INSERT INTO core.projects (
+        INSERT INTO ${TABLES.PROJECTS} (
           tenant_id,
           owner_id,
           name,
@@ -139,7 +140,7 @@ class ProjectModel {
 
     try {
       const result = await pool.query(`
-        UPDATE core.projects
+        UPDATE ${TABLES.PROJECTS}
         SET
           name = COALESCE($2, name),
           description = COALESCE($3, description),
@@ -167,7 +168,7 @@ class ProjectModel {
   static async delete(projectId, userId) {
     try {
       const result = await pool.query(`
-        UPDATE core.projects
+        UPDATE ${TABLES.PROJECTS}
         SET 
           status = 'deleted',
           updated_by = $2,
@@ -193,15 +194,15 @@ class ProjectModel {
   static async nameExists(name, userId, tenantId, excludeId = null) {
     try {
       const query = excludeId
-        ? `SELECT id FROM core.projects 
+        ? `SELECT id FROM ${TABLES.PROJECTS} 
            WHERE LOWER(name) = LOWER($1) 
            AND owner_id = $2 
-           AND tenant_id = $3 
+           AND tenant_id = $3
            AND id != $4
            AND status != 'deleted'`
-        : `SELECT id FROM core.projects 
+        : `SELECT id FROM ${TABLES.PROJECTS} 
            WHERE LOWER(name) = LOWER($1) 
-           AND owner_id = $2 
+           AND owner_id = $2
            AND tenant_id = $3
            AND status != 'deleted'`;
 

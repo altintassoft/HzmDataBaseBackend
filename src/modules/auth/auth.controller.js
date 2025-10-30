@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../../core/config/database');
 const config = require('../../core/config');
 const logger = require('../../core/logger');
+const { TABLES } = require('../../shared/constants/tables');
 
 /**
  * Authentication Controller
@@ -24,7 +25,7 @@ class AuthController {
 
       // Check if user exists
       const existingUser = await pool.query(
-        'SELECT id FROM core.users WHERE email = $1',
+        `SELECT id FROM ${TABLES.USERS} WHERE email = $1`,
         [email]
       );
 
@@ -37,7 +38,7 @@ class AuthController {
 
       // Create tenant first
       const tenant = await pool.query(
-        `INSERT INTO core.tenants (name, slug, default_currency)
+        `INSERT INTO ${TABLES.TENANTS} (name, slug, default_currency)
          VALUES ($1, $2, 'USD')
          RETURNING id`,
         [name || 'My Organization', email.split('@')[0]]
@@ -47,7 +48,7 @@ class AuthController {
 
       // Create user
       const user = await pool.query(
-        `INSERT INTO core.users (tenant_id, email, password_hash, role)
+        `INSERT INTO ${TABLES.USERS} (tenant_id, email, password_hash, role)
          VALUES ($1, $2, $3, 'admin')
          RETURNING id, tenant_id, email, role, created_at`,
         [tenantId, email, passwordHash]
@@ -92,7 +93,7 @@ class AuthController {
       // Get user
       const result = await pool.query(
         `SELECT id, tenant_id, email, password_hash, role, is_active
-         FROM core.users
+         FROM ${TABLES.USERS}
          WHERE email = $1 AND is_deleted = false`,
         [email]
       );
@@ -170,7 +171,7 @@ class AuthController {
       // Get user to ensure they still exist and are active
       const result = await pool.query(
         `SELECT id, tenant_id, email, role, is_active
-         FROM core.users
+         FROM ${TABLES.USERS}
          WHERE id = $1 AND is_deleted = false`,
         [decoded.userId]
       );
@@ -281,7 +282,7 @@ class AuthController {
 
       // Get current user password
       const result = await pool.query(
-        'SELECT password_hash FROM core.users WHERE id = $1',
+        `SELECT password_hash FROM ${TABLES.USERS} WHERE id = $1`,
         [userId]
       );
 
@@ -304,7 +305,7 @@ class AuthController {
 
       // Update password
       await pool.query(
-        'UPDATE core.users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+        `UPDATE ${TABLES.USERS} SET password_hash = $1, updated_at = NOW() WHERE id = $2`,
         [newPasswordHash, userId]
       );
 

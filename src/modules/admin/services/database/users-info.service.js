@@ -1,5 +1,6 @@
 const { pool } = require('../../../../core/config/database');
 const logger = require('../../../../core/logger');
+const { TABLES } = require('../../../../shared/constants/tables');
 
 /**
  * Users Info Service
@@ -14,7 +15,7 @@ class UsersInfoService {
    */
   static async getUsersInfo(limit = 100, offset = 0) {
     try {
-      const countResult = await pool.query(`SELECT COUNT(*) as total FROM core.users;`);
+      const countResult = await pool.query(`SELECT COUNT(*) as total FROM ${TABLES.USERS};`);
       const usersResult = await pool.query(`
         SELECT 
           id, 
@@ -24,7 +25,7 @@ class UsersInfoService {
           is_active, 
           created_at, 
           updated_at
-        FROM core.users 
+        FROM ${TABLES.USERS} 
         ORDER BY id 
         LIMIT $1 OFFSET $2;
       `, [limit || 100, offset || 0]);

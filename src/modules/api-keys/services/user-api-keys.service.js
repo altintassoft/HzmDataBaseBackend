@@ -2,6 +2,7 @@ const { pool } = require('../../../core/config/database');
 const logger = require('../../../core/logger');
 const bcrypt = require('bcrypt');
 const { generateApiKey, generateApiPassword } = require('../utils/generators');
+const { TABLES } = require('../../../shared/constants/tables');
 
 /**
  * User API Keys Service
@@ -24,7 +25,7 @@ class UserApiKeysService {
           api_password,
           api_key_created_at,
           api_key_last_used_at
-        FROM core.users
+        FROM ${TABLES.USERS}
         WHERE email = $1;
       `, [userEmail]);
 
@@ -70,7 +71,7 @@ class UserApiKeysService {
 
       // Update user with new API credentials (storing password as plain text for now)
       const result = await pool.query(`
-        UPDATE core.users
+        UPDATE ${TABLES.USERS}
         SET 
           api_key = $1,
           api_password = $2,
@@ -120,7 +121,7 @@ class UserApiKeysService {
       const apiKey = generateApiKey();
 
       const result = await pool.query(`
-        UPDATE core.users
+        UPDATE ${TABLES.USERS}
         SET 
           api_key = $1,
           api_key_created_at = NOW(),
@@ -167,7 +168,7 @@ class UserApiKeysService {
       const apiKeyHash = await bcrypt.hash(apiPassword, 10);
 
       const result = await pool.query(`
-        UPDATE core.users
+        UPDATE ${TABLES.USERS}
         SET 
           api_password = $1,
           api_key_hash = $2,
@@ -212,7 +213,7 @@ class UserApiKeysService {
   static async revokeApiCredentials(userId, userEmail) {
     try {
       const result = await pool.query(`
-        UPDATE core.users
+        UPDATE ${TABLES.USERS}
         SET 
           api_key = NULL,
           api_password = NULL,

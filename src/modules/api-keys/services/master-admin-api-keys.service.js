@@ -2,6 +2,7 @@ const { pool } = require('../../../core/config/database');
 const logger = require('../../../core/logger');
 const bcrypt = require('bcrypt');
 const { generateApiKey, generateApiPassword } = require('../utils/generators');
+const { TABLES } = require('../../../shared/constants/tables');
 
 /**
  * Master Admin API Keys Service
@@ -23,7 +24,7 @@ class MasterAdminApiKeysService {
           api_password,
           api_key_created_at,
           api_key_last_used_at
-        FROM core.users
+        FROM ${TABLES.USERS}
         WHERE email = 'ozgurhzm@hzmsoft.com' AND role = 'master_admin';
       `);
 
@@ -68,7 +69,7 @@ class MasterAdminApiKeysService {
 
       // Update Master Admin with new API credentials
       const result = await pool.query(`
-        UPDATE core.users
+        UPDATE ${TABLES.USERS}
         SET 
           api_key = $1,
           api_password = $2,
@@ -114,7 +115,7 @@ class MasterAdminApiKeysService {
       const apiKey = generateApiKey();
 
       const result = await pool.query(`
-        UPDATE core.users
+        UPDATE ${TABLES.USERS}
         SET 
           api_key = $1,
           api_key_created_at = NOW(),
@@ -158,7 +159,7 @@ class MasterAdminApiKeysService {
       const apiKeyHash = await bcrypt.hash(apiPassword, 10);
 
       const result = await pool.query(`
-        UPDATE core.users
+        UPDATE ${TABLES.USERS}
         SET 
           api_password = $1,
           api_key_hash = $2,
