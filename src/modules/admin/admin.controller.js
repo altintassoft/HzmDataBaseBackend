@@ -844,6 +844,82 @@ class AdminController {
   }
 
   /**
+   * PUT /api/v1/admin/tenant-settings
+   * Update tenant settings (currency, timezone, language)
+   */
+  static async updateTenantSettings(req, res) {
+    try {
+      const { default_currency, timezone, language } = req.body;
+      const user = req.user;
+
+      // Admin can update their own tenant, Master Admin can update any
+      const tenantId = user.role === 'master_admin' && req.body.tenant_id 
+        ? req.body.tenant_id 
+        : user.tenant_id;
+
+      const updates = [];
+      const params = [];
+      let paramCount = 1;
+
+      if (default_currency) {
+        updates.push(`default_currency = $${paramCount++}`);
+        params.push(default_currency);
+      }
+
+      if (timezone) {
+        updates.push(`timezone = $${paramCount++}`);
+        params.push(timezone);
+      }
+
+      if (language) {
+        updates.push(`language = $${paramCount++}`);
+        params.push(language);
+      }
+
+      if (updates.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'No fields to update'
+        });
+      }
+
+      updates.push(`updated_at = CURRENT_TIMESTAMP`);
+      params.push(tenantId);
+
+      const query = `
+        UPDATE core.tenants
+        SET ${updates.join(', ')}
+        WHERE id = $${paramCount}
+        RETURNING id, name, default_currency
+      `;
+
+      const result = await pool.query(query, params);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Tenant not found'
+        });
+      }
+
+      logger.info(`Tenant settings updated: ${tenantId} by user ${user.id}`);
+
+      res.json({
+        success: true,
+        tenant: result.rows[0],
+        message: 'Tenant ayarları güncellendi'
+      });
+
+    } catch (error) {
+      logger.error('Failed to update tenant settings:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
    * POST /api/v1/admin/exchange-rates
    * Update exchange rate (admin only)
    */

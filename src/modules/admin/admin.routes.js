@@ -83,6 +83,16 @@ router.post('/generate-report', authenticateJwtOrApiKey, AdminController.generat
 router.get('/currencies', authenticateJwtOrApiKey, AdminController.getCurrencies);
 
 /**
+ * Update Tenant Settings
+ * PUT /api/v1/admin/tenant-settings
+ * 
+ * Update tenant currency, timezone, language
+ * Body: { default_currency, timezone, language }
+ * Auth: Admin or Master Admin
+ */
+router.put('/tenant-settings', authenticateJwtOrApiKey, AdminController.updateTenantSettings);
+
+/**
  * Update Exchange Rate
  * POST /api/v1/admin/exchange-rates
  * 
