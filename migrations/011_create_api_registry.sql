@@ -176,8 +176,8 @@ BEGIN
     r.table_name::VARCHAR(100),
     r.is_enabled,
     r.is_readonly,
-    COALESCE(ARRAY_AGG(f.column_name) FILTER (WHERE f.readable = true), ARRAY[]::text[]) AS readable_columns,
-    COALESCE(ARRAY_AGG(f.column_name) FILTER (WHERE f.writable = true), ARRAY[]::text[]) AS writable_columns
+    COALESCE(ARRAY_AGG(f.column_name::text) FILTER (WHERE f.readable = true), ARRAY[]::text[]) AS readable_columns,
+    COALESCE(ARRAY_AGG(f.column_name::text) FILTER (WHERE f.writable = true), ARRAY[]::text[]) AS writable_columns
   FROM api_resources r
   LEFT JOIN api_resource_fields f ON f.resource = r.resource
   WHERE r.resource = p_resource
