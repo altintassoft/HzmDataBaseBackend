@@ -74,6 +74,25 @@ router.get('/get-latest-report', authenticateJwtOrApiKey, AdminController.getLat
 router.post('/generate-report', authenticateJwtOrApiKey, AdminController.generateReport);
 
 /**
+ * Get Currencies
+ * GET /api/v1/admin/currencies
+ * 
+ * Returns all active currencies with symbols
+ * Auth: Admin or Master Admin
+ */
+router.get('/currencies', authenticateJwtOrApiKey, AdminController.getCurrencies);
+
+/**
+ * Update Exchange Rate
+ * POST /api/v1/admin/exchange-rates
+ * 
+ * Manually update exchange rate
+ * Body: { fromCurrency, toCurrency, rate }
+ * Auth: Admin or Master Admin
+ */
+router.post('/exchange-rates', authenticateJwtOrApiKey, AdminController.updateExchangeRate);
+
+/**
  * Get Table Data (Master Admin Panel)
  * GET /api/v1/admin/table-data/:schema/:table
  * 

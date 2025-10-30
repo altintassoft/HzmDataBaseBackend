@@ -825,6 +825,53 @@ class AdminController {
   }
 
   /**
+   * GET /api/v1/admin/currencies
+   * Get all currencies
+   */
+  static async getCurrencies(req, res) {
+    try {
+      const CurrencyManager = require('../../core/services/currency-manager');
+      const currencies = await CurrencyManager.getActiveCurrencies();
+      
+      res.json({
+        success: true,
+        currencies
+      });
+    } catch (error) {
+      logger.error('Failed to get currencies:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/admin/exchange-rates
+   * Update exchange rate (admin only)
+   */
+  static async updateExchangeRate(req, res) {
+    try {
+      const { fromCurrency, toCurrency, rate } = req.body;
+      
+      if (!fromCurrency || !toCurrency || !rate) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: fromCurrency, toCurrency, rate'
+        });
+      }
+
+      const CurrencyManager = require('../../core/services/currency-manager');
+      await CurrencyManager.updateRate(fromCurrency, toCurrency, rate, 'manual');
+
+      res.json({
+        success: true,
+        message: `Exchange rate updated: ${fromCurrency}→${toCurrency} = ${rate}`
+      });
+    } catch (error) {
+      logger.error('Failed to update exchange rate:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  /**
    * GET /api/v1/admin/table-data/:schema/:table
    * Get table data with RLS bypass for admin/master_admin
    * 
