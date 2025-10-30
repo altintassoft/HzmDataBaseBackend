@@ -40,11 +40,17 @@ class HardCodeScanner {
   static findHardCodedTables(content) {
     if (!content.includes('pool.query')) return null;
     
-    const tableQueries = content.match(/FROM\s+(users|projects|tenants|api_keys)\s+/gi);
-    if (!tableQueries) return null;
-    
     // TABLES. constant kullanılıyorsa sorun yok
-    if (content.includes('TABLES.')) return null;
+    if (content.includes('TABLES.USERS') || 
+        content.includes('TABLES.PROJECTS') || 
+        content.includes('TABLES.TENANTS') ||
+        content.includes('${TABLES.')) {
+      return null;
+    }
+    
+    // Hard-coded tablo isimlerini bul
+    const tableQueries = content.match(/FROM\s+(core\.users|core\.projects|core\.tenants|public\.\w+|cfg\.\w+)\s+/gi);
+    if (!tableQueries) return null;
     
     return { matches: tableQueries };
   }
