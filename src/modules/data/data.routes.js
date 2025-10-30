@@ -29,8 +29,42 @@ router.use(trackRequest);
 // All routes require API Key authentication
 // (Applied in controller level for better error handling)
 
-// Generic CRUD operations (ORDER MATTERS!)
+// ============================================================================
+// SPECIAL ENDPOINTS (Week 4) - MUST BE BEFORE GENERIC ROUTES
+// ============================================================================
+
+/**
+ * GET /api/v1/data/_metrics
+ * Get metrics dashboard data
+ * 
+ * Returns:
+ * - Request count per resource
+ * - Response time stats
+ * - Error rate
+ * - Top resources
+ * 
+ * Public endpoint (no auth required)
+ */
+router.get('/_metrics', DataController.getMetrics);
+
+/**
+ * GET /api/v1/data/_health
+ * Health check for generic handler
+ * 
+ * Returns:
+ * - Database connection status
+ * - Active resources count
+ * - System uptime
+ * 
+ * Public endpoint (no auth required)
+ */
+router.get('/_health', DataController.getHealth);
+
+// ============================================================================
+// GENERIC CRUD OPERATIONS (ORDER MATTERS!)
 // More specific routes first, then generic ones
+// ============================================================================
+
 router.post('/:resource/batch', checkIdempotency, authenticateApiKey, DataController.batchCreate);
 router.put('/:resource/batch', checkIdempotency, authenticateApiKey, DataController.batchUpdate);
 router.delete('/:resource/batch', checkIdempotency, authenticateApiKey, DataController.batchDelete);

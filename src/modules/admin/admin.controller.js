@@ -1,6 +1,7 @@
 const logger = require('../../core/logger');
 const SyncAnalysisService = require('./services/compliance/sync-analysis.service');
 const AIKnowledgeBaseService = require('./services/ai-knowledge-base.service');
+const OpenAPIGeneratorService = require('./services/openapi-generator.service');
 const { pool } = require('../../core/config/database');
 const { cache } = require('../../core/config/redis');
 const { TABLES } = require('../../shared/constants/tables');
@@ -1098,6 +1099,101 @@ class AdminController {
     } catch (error) {
       logger.error('Failed to get knowledge base stats:', error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  // ============================================================================
+  // OPENAPI DOCUMENTATION (Week 4)
+  // ============================================================================
+
+  /**
+   * GET /api/v1/admin/docs/openapi.json
+   * Get OpenAPI 3.0 specification (JSON)
+   * 
+   * Auto-generated from api_resources metadata
+   * Public endpoint (no auth required)
+   */
+  static async getOpenAPISpec(req, res) {
+    try {
+      logger.info('OpenAPI spec requested');
+      const spec = await OpenAPIGeneratorService.generateCompleteSpec();
+      
+      res.json(spec);
+    } catch (error) {
+      logger.error('Failed to generate OpenAPI spec:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to generate OpenAPI specification',
+        message: error.message 
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/admin/docs
+   * Get Swagger UI HTML page
+   * 
+   * Interactive API documentation
+   * Public endpoint (no auth required)
+   */
+  static async getSwaggerUI(req, res) {
+    try {
+      logger.info('Swagger UI requested');
+      
+      const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HZM Database API Documentation</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    .swagger-ui .topbar {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      const ui = SwaggerUIBundle({
+        url: '/api/v1/admin/docs/openapi.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout",
+        persistAuthorization: true
+      });
+      window.ui = ui;
+    };
+  </script>
+</body>
+</html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } catch (error) {
+      logger.error('Failed to serve Swagger UI:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to serve Swagger UI',
+        message: error.message 
+      });
     }
   }
 }

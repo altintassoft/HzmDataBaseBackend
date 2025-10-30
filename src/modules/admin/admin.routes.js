@@ -228,6 +228,28 @@ router.get('/knowledge-base-stats',
   AdminController.getKnowledgeBaseStats
 );
 
+// ============================================================================
+// OPENAPI DOCUMENTATION ROUTES (Week 4)
+// ============================================================================
+
+/**
+ * Get OpenAPI Specification (JSON)
+ * GET /api/v1/admin/docs/openapi.json
+ * 
+ * Auto-generated from api_resources metadata
+ * Public endpoint (no auth required)
+ */
+router.get('/docs/openapi.json', AdminController.getOpenAPISpec);
+
+/**
+ * Get Swagger UI HTML
+ * GET /api/v1/admin/docs
+ * 
+ * Interactive API documentation
+ * Public endpoint (no auth required)
+ */
+router.get('/docs', AdminController.getSwaggerUI);
+
 module.exports = router;
 
 

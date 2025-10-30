@@ -2,6 +2,8 @@ const RegistryService = require('./services/registry.service');
 const QueryBuilder = require('./utils/query-builder');
 const { pool } = require('../../core/config/database');
 const logger = require('../../core/logger');
+const { getMetrics: getMetricsData, getTopResources } = require('../../middleware/metrics');
+const { getCacheStats } = require('../../middleware/idempotency');
 
 /**
  * Data Controller - Generic CRUD Operations
@@ -457,6 +459,120 @@ class DataController {
       success: false, 
       message: 'Batch delete not implemented yet (Week 3-4)' 
     });
+  }
+
+  // ============================================================================
+  // METRICS & HEALTH (Week 4)
+  // ============================================================================
+
+  /**
+   * GET /data/_metrics
+   * Get metrics dashboard data
+   */
+  static async getMetrics(req, res) {
+    try {
+      const metricsData = getMetricsData();
+      const topResources = getTopResources(10);
+      const cacheStats = getCacheStats();
+
+      // Calculate stats
+      const totalRequests = metricsData.totalRequests || 0;
+      const errorCount = metricsData.errorCount || 0;
+      const errorRate = totalRequests > 0 ? (errorCount / totalRequests * 100).toFixed(2) : 0;
+
+      const response = {
+        success: true,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        metrics: {
+          requests: {
+            total: totalRequests,
+            errors: errorCount,
+            errorRate: `${errorRate}%`
+          },
+          responseTime: {
+            average: metricsData.avgResponseTime || 0,
+            min: metricsData.minResponseTime || 0,
+            max: metricsData.maxResponseTime || 0
+          },
+          topResources: topResources.map(r => ({
+            resource: r.resource,
+            requestCount: r.count,
+            avgResponseTime: r.avgResponseTime
+          })),
+          cache: {
+            size: cacheStats.size,
+            hitRate: cacheStats.hitRate || 'N/A'
+          }
+        }
+      };
+
+      res.json(response);
+    } catch (error) {
+      logger.error('Failed to get metrics:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to retrieve metrics',
+        message: error.message 
+      });
+    }
+  }
+
+  /**
+   * GET /data/_health
+   * Health check for generic handler
+   */
+  static async getHealth(req, res) {
+    try {
+      // Test database connection
+      const dbStart = Date.now();
+      const dbResult = await pool.query('SELECT 1 as health');
+      const dbResponseTime = Date.now() - dbStart;
+
+      // Get enabled resources count
+      const resourcesResult = await pool.query(
+        'SELECT COUNT(*) as count FROM api_resources WHERE is_enabled = true'
+      );
+      const enabledResourcesCount = parseInt(resourcesResult.rows[0].count);
+
+      // Get total resources count
+      const totalResourcesResult = await pool.query(
+        'SELECT COUNT(*) as count FROM api_resources'
+      );
+      const totalResourcesCount = parseInt(totalResourcesResult.rows[0].count);
+
+      const response = {
+        success: true,
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        checks: {
+          database: {
+            status: dbResult.rows[0].health === 1 ? 'ok' : 'error',
+            responseTime: `${dbResponseTime}ms`
+          },
+          resources: {
+            enabled: enabledResourcesCount,
+            total: totalResourcesCount,
+            status: enabledResourcesCount > 0 ? 'active' : 'no_active_resources'
+          },
+          memory: {
+            usage: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+            total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB`
+          }
+        }
+      };
+
+      res.json(response);
+    } catch (error) {
+      logger.error('Health check failed:', error);
+      res.status(503).json({ 
+        success: false,
+        status: 'unhealthy',
+        error: 'Health check failed',
+        message: error.message 
+      });
+    }
   }
 }
 
