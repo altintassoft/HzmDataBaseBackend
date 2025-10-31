@@ -45,27 +45,37 @@ class DataController {
       const queryParts = QueryBuilder.build(req.query, meta);
       
       // RLS: tenant_id filtresi (varsa)
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.tenant_id; // Single source from auth middleware
       let rlsSql = '';
       const rlsParams = [];
       
       if (tenantId) {
-        // Check if table has tenant_id column
+        // Check if table has tenant_id column (system column for multi-tenancy)
         const hasTenantId = meta.readableColumns.includes('tenant_id');
         if (hasTenantId) {
           rlsSql = ` AND tenant_id = $${queryParts.where.params.length + 1}`;
           rlsParams.push(tenantId);
         }
       }
+      
+      // Soft delete filter (exclude soft-deleted records)
+      const hasSoftDelete = meta.readableColumns.includes('is_deleted');
+      if (hasSoftDelete) {
+        rlsSql += ` AND (is_deleted IS NOT TRUE)`;
+      }
 
+      // Sanitize limit/offset (injection prevention + bounds check)
+      const limit = Math.max(1, Math.min(1000, Number(queryParts.pagination.limit) || 50));
+      const offset = Math.max(0, Number(queryParts.pagination.offset) || 0);
+      
       // SQL oluştur
       const sql = `
         SELECT ${queryParts.select}
         FROM ${meta.schema}.${meta.table}
         WHERE 1=1 ${queryParts.where.sql} ${rlsSql}
         ${queryParts.order}
-        LIMIT ${queryParts.pagination.limit}
-        OFFSET ${queryParts.pagination.offset}
+        LIMIT ${limit}
+        OFFSET ${offset}
       `;
 
       const params = [...queryParts.where.params, ...rlsParams];
@@ -85,9 +95,9 @@ class DataController {
         data: result.rows,
         pagination: {
           page: queryParts.pagination.page,
-          limit: queryParts.pagination.limit,
+          limit, // Sanitized value
           total: totalCount,
-          totalPages: Math.ceil(totalCount / queryParts.pagination.limit)
+          totalPages: Math.ceil(totalCount / limit) // Use sanitized limit
         }
       });
 
@@ -123,13 +133,19 @@ class DataController {
       }
 
       // RLS
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.tenant_id; // Single source from auth middleware
       let rlsSql = '';
       const params = [id];
       
       if (tenantId && meta.readableColumns.includes('tenant_id')) {
         rlsSql = ` AND tenant_id = $2`;
         params.push(tenantId);
+      }
+      
+      // Soft delete filter (exclude soft-deleted records)
+      const hasSoftDelete = meta.readableColumns.includes('is_deleted');
+      if (hasSoftDelete) {
+        rlsSql += ` AND (is_deleted IS NOT TRUE)`;
       }
 
       const sql = `
@@ -200,13 +216,13 @@ class DataController {
 
       // tenant_id inject et (SYSTEM COLUMN - always inject if exists in table)
       // Don't check writableColumns - tenant_id is a system column managed by backend
-      if (req.user?.tenant_id && meta.readableColumns.includes('tenant_id')) {
-        data.tenant_id = req.user.tenant_id;
+      if (req.tenant_id && meta.readableColumns.includes('tenant_id')) {
+        data.tenant_id = req.tenant_id; // Single source from auth middleware
         logger.debug('tenant_id injected (system column)', { tenant_id: data.tenant_id });
-      } else if (!req.user?.tenant_id) {
-        logger.warn('tenant_id NOT injected - req.user.tenant_id missing', {
+      } else if (!req.tenant_id) {
+        logger.warn('tenant_id NOT injected - missing from auth context', {
           has_user: !!req.user,
-          req_tenant_id: req.tenant_id
+          has_auth: !!req.auth
         });
       }
 
@@ -300,7 +316,7 @@ class DataController {
       const values = entries.map(([, value]) => value);
 
       // RLS
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.tenant_id; // Single source from auth middleware
       let rlsSql = '';
       
       if (tenantId && meta.readableColumns.includes('tenant_id')) {
@@ -356,7 +372,7 @@ class DataController {
       }
 
       // RLS
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.tenant_id; // Single source from auth middleware
       let rlsSql = '';
       const params = [id];
       
@@ -365,10 +381,13 @@ class DataController {
         params.push(tenantId);
       }
 
-      const sql = `
-        DELETE FROM ${meta.schema}.${meta.table}
-        WHERE id = $1 ${rlsSql}
-      `;
+      // Soft delete support (check if table has is_deleted column)
+      const hasSoftDelete = meta.readableColumns.includes('is_deleted');
+      const baseWhere = `WHERE id = $1 ${rlsSql}`;
+      
+      const sql = hasSoftDelete
+        ? `UPDATE ${meta.schema}.${meta.table} SET is_deleted = TRUE, deleted_at = NOW() ${baseWhere}`
+        : `DELETE FROM ${meta.schema}.${meta.table} ${baseWhere}`;
 
       const result = await pool.query(sql, params);
 
@@ -376,7 +395,7 @@ class DataController {
         return res.status(404).json({ success: false, code: 'NOT_FOUND' });
       }
 
-      return res.status(204).send();
+      return res.status(204).end(); // No body per HTTP spec
 
     } catch (error) {
       if (error.message.includes('is not enabled')) {
@@ -412,13 +431,19 @@ class DataController {
       const where = QueryBuilder.buildWhere(req.query, meta);
       
       // RLS
-      const tenantId = req.user?.tenant_id;
+      const tenantId = req.tenant_id; // Single source from auth middleware
       let rlsSql = '';
       const rlsParams = [];
       
       if (tenantId && meta.readableColumns.includes('tenant_id')) {
         rlsSql = ` AND tenant_id = $${where.params.length + 1}`;
         rlsParams.push(tenantId);
+      }
+      
+      // Soft delete filter (exclude soft-deleted records)
+      const hasSoftDelete = meta.readableColumns.includes('is_deleted');
+      if (hasSoftDelete) {
+        rlsSql += ` AND (is_deleted IS NOT TRUE)`;
       }
       
       const sql = `
@@ -538,13 +563,13 @@ class DataController {
 
       // Get enabled resources count
       const resourcesResult = await pool.query(
-        'SELECT COUNT(*) as count FROM api_resources WHERE is_enabled = true'
+        'SELECT COUNT(*) as count FROM app.api_resources WHERE is_enabled = true'
       );
       const enabledResourcesCount = parseInt(resourcesResult.rows[0].count);
-
+      
       // Get total resources count
       const totalResourcesResult = await pool.query(
-        'SELECT COUNT(*) as count FROM api_resources'
+        'SELECT COUNT(*) as count FROM app.api_resources'
       );
       const totalResourcesCount = parseInt(totalResourcesResult.rows[0].count);
 
