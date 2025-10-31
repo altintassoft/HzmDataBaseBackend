@@ -1979,6 +1979,42 @@ curl -X POST http://localhost:5000/api/v1/projects/1/tables/1/records \
 
 ## 🎉 Changelog
 
+### Hotfix Update (31 Ekim 2025) - Critical Production Fixes ✅
+
+**🔥 2 Critical Hotfixes Deployed:**
+- ✅ **Migration 019:** Cleanup users phantom fields (`first_name`, `last_name` removed from `api_resource_fields`)
+  - **Problem:** Production crash: `Error: column "first_name" does not exist`
+  - **Solution:** Delete phantom columns + re-insert correct 10 fields
+  - **Test:** Users GET now returns 200 OK (2 users)
+- ✅ **Admin Query Endpoint:** `POST /api/v1/admin/database/query`
+  - **Problem:** Test script tests 5, 14, 15, 16 failing (endpoint missing)
+  - **Solution:** Implemented executeQuery controller + route
+  - **Security:** Read-only (SELECT), admin/master_admin only, RLS bypass, SQL injection prevention
+  - **Test:** All 4 tests now pass (API resources, RBAC roles, permissions count, role mappings)
+
+**Test Results (17/17 PASS):**
+```
+✅ Health Check: OK (3061s uptime)
+✅ Generic Handler Health: 4 resources active
+✅ Users GET: 200 OK (HOTFIX VERIFIED!)
+✅ RBAC Roles: 5 system roles (ADMIN QUERY WORKS!)
+✅ Permissions Count: 35+ permissions (8 categories)
+✅ Role Mappings: Platform Admin = 35 permissions
+```
+
+**Business Impact:**
+- 🎯 Production stability restored
+- 🎯 Test suite 100% passing
+- 🎯 Admin debugging tools operational
+- 🎯 MVP Go/No-Go: All Must-Have criteria PASS
+
+**Deployment:**
+- 🚀 GitHub: Committed + Pushed (main branch)
+- 🚀 Railway: Auto-deployed + verified
+- 🚀 Test script: `bash test-backend.sh` → 17/17 PASS
+
+---
+
 ### Phase 3 Update (31 Ekim 2025) - Security & RBAC Complete ✅
 
 **RBAC + Organizations Tamamlandı:**
