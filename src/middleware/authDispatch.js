@@ -18,7 +18,7 @@
 
 const config = require('../core/config');
 const logger = require('../core/logger');
-const db = require('../core/database');
+const { pool } = require('../core/config/database');
 
 /**
  * Auth Dispatch - Main entry point
@@ -348,7 +348,6 @@ async function verifyJWT(token, req) {
  * - Never log full key_hash (max 8 chars preview in dev mode)
  */
 async function verifyAPIKey(apiKeyData, req) {
-  const db = require('../core/database');
   const bcrypt = require('bcrypt');
   const crypto = require('crypto');
   
@@ -358,7 +357,7 @@ async function verifyAPIKey(apiKeyData, req) {
   const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
   
   // Query database (NO email required, find by key_hash only)
-  const result = await db.query(`
+  const result = await pool.query(`
     SELECT 
       ak.id, ak.key_hash, ak.api_password_hash, ak.scopes, ak.is_active,
       u.id as user_id, u.email, u.tenant_id, u.role, u.is_deleted,
@@ -476,7 +475,7 @@ async function checkDBFeatureFlag(flagKey) {
   }
   
   try {
-    const result = await db.query(`
+    const result = await pool.query(`
       SELECT enabled 
       FROM cfg.feature_flags 
       WHERE key = $1
