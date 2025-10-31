@@ -1154,10 +1154,17 @@ CREATE TABLE ops.break_glass_tokens (
 
 ##### **PR-2: Enable Enforcement (PHASE 4)** 🔓
 
-**Tek satır değişiklik:**
+**Environment Variables (Production):**
 ```bash
 # Railway Environment Variables
-ENABLE_AUTH_PROFILES=true  # ← Flag'i aç
+
+# Phase 4B: Resource-Scoped Auth Profiles
+ENABLE_AUTH_PROFILES=true  # ← Flag'i aç (Phase 4)
+
+# JWT Security Hardening (ENTERPRISE)
+JWT_ISSUER=hzm.backend      # Token issuer validation
+JWT_AUDIENCE=hzm.api         # Token audience validation
+# JWT_SECRET=... (already set, DO NOT CHANGE)
 ```
 
 **Profile Matrisi (Enforcement Aktif):**

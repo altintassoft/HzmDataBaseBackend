@@ -54,7 +54,7 @@ class AuthController {
         [tenantId, email, passwordHash]
       );
 
-      // Generate JWT
+      // Generate JWT (ENTERPRISE: with issuer/audience)
       const token = jwt.sign(
         {
           userId: user.rows[0].id,
@@ -63,7 +63,11 @@ class AuthController {
           role: user.rows[0].role
         },
         config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
+        { 
+          expiresIn: config.jwt.expiresIn,
+          issuer: process.env.JWT_ISSUER || 'hzm.backend',
+          audience: process.env.JWT_AUDIENCE || 'hzm.api'
+        }
       );
 
       res.status(201).json({
@@ -115,7 +119,7 @@ class AuthController {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // Generate JWT
+      // Generate JWT (ENTERPRISE: with issuer/audience)
       const token = jwt.sign(
         {
           userId: user.id,
@@ -124,7 +128,11 @@ class AuthController {
           role: user.role
         },
         config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
+        { 
+          expiresIn: config.jwt.expiresIn,
+          issuer: process.env.JWT_ISSUER || 'hzm.backend',
+          audience: process.env.JWT_AUDIENCE || 'hzm.api'
+        }
       );
 
       res.json({

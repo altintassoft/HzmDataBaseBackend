@@ -1,10 +1,17 @@
 /**
- * Auth Dispatch Middleware
+ * Auth Dispatch Middleware (ENTERPRISE HARDENED)
  * 
  * Hybrid authentication dispatcher with feature-flagged resource-scoped profiles
  * 
  * Phase 1 (NOW): Simple hybrid (JWT OR API Key) - backward compatible
  * Phase 4 (LATER): Resource-scoped auth profiles (JWT_ONLY, APIKEY_ONLY, EITHER, JWT_AND_APIKEY)
+ * 
+ * ENTERPRISE SECURITY (31 Oct 2025):
+ * - JWT: Algorithm whitelist (HS256), issuer/audience validation, clock tolerance
+ * - API Key: Email-free lookup (key_hash only), user suspension checks
+ * - Logging: Zero token/key leakage (length-only, redacted previews in dev)
+ * - Context: Enriched for RBAC (scopes) & Rate Limiting (subject_id)
+ * - Error Responses: Standardized format (request_id, timestamp, structured error)
  * 
  * @see BACKEND_PHASE_PLAN.md - Phase 4.7: Resource-Scoped Auth Profiles
  */
@@ -89,11 +96,16 @@ async function simpleHybridAuth(req, res, next, bearer, apiKeyData) {
         req.auth = { type: 'jwt', ...jwtAuth };
         req.user = jwtAuth.user;
         req.tenant_id = jwtAuth.tenant_id;
-        logger.debug('Auth: JWT accepted', { user_id: jwtAuth.user.id });
+        
+        // ENTERPRISE: Enrich context for RBAC & Rate Limiting
+        req.subject_id = jwtAuth.user.id;
+        req.scopes = jwtAuth.scopes || [];
+        
+        logger.debug('Auth: JWT accepted', { user_id: jwtAuth.user.id, subject_id: req.subject_id });
         return next();
       }
     } catch (error) {
-      logger.warn('JWT verification failed:', error.message);
+      logger.warn('JWT verification failed', { reason: error.message });
       // Continue to try API Key
     }
   }
@@ -106,22 +118,28 @@ async function simpleHybridAuth(req, res, next, bearer, apiKeyData) {
         req.auth = { type: 'apikey', ...keyAuth };
         req.user = keyAuth.user;
         req.tenant_id = keyAuth.tenant_id;
-        logger.debug('Auth: API Key accepted', { key_id: keyAuth.key_id });
+        
+        // ENTERPRISE: Enrich context for RBAC & Rate Limiting
+        req.subject_id = keyAuth.key_id; // Rate limit by key_id for API Keys
+        req.scopes = keyAuth.scopes || [];
+        
+        logger.debug('Auth: API Key accepted', { key_id: keyAuth.key_id, subject_id: req.subject_id });
         return next();
       }
     } catch (error) {
-      logger.warn('API Key verification failed:', error.message);
+      logger.warn('API Key verification failed', { reason: error.message });
     }
   }
   
-  // Neither JWT nor API Key valid
+  // Neither JWT nor API Key valid - STANDARDIZED ERROR RESPONSE
   return res.status(401).json({
-    success: false,
-    error: {
-      code: 'AUTH_REQUIRED',
+    error: { 
+      code: 'AUTH_REQUIRED', 
       message: 'Authentication required',
-      hint: 'Provide either JWT (Authorization: Bearer TOKEN) or API Key (X-API-Key + X-API-Password)'
-    }
+      hint: 'Provide JWT (Authorization: Bearer TOKEN) or API Key (X-API-Key + X-API-Password)'
+    },
+    request_id: req.id || req.headers['x-request-id'],
+    timestamp: new Date().toISOString()
   });
 }
 
@@ -157,15 +175,14 @@ async function resourceScopedAuth(req, res, next, bearer, apiKeyData) {
   
   if (!authOk) {
     return res.status(401).json({
-      success: false,
       error: {
         code: 'AUTH_PROFILE_MISMATCH',
         message: `Resource requires: ${profile}`,
-        provided: {
-          jwt: !!hasJWT,
-          apiKey: !!hasKey
-        }
-      }
+        required: profile,
+        provided: { jwt: !!hasJWT, apiKey: !!hasKey }
+      },
+      request_id: req.id || req.headers['x-request-id'],
+      timestamp: new Date().toISOString()
     });
   }
   
@@ -174,11 +191,13 @@ async function resourceScopedAuth(req, res, next, bearer, apiKeyData) {
     const hmacValid = await verifyHMAC(req);
     if (!hmacValid) {
       return res.status(401).json({
-        success: false,
         error: {
           code: 'AUTH_HMAC_REQUIRED',
-          message: 'HMAC signature required (X-Timestamp, X-Nonce, X-Signature)'
-        }
+          message: 'HMAC signature required',
+          hint: 'Provide X-Timestamp, X-Nonce, X-Signature headers'
+        },
+        request_id: req.id || req.headers['x-request-id'],
+        timestamp: new Date().toISOString()
       });
     }
   }
@@ -188,11 +207,12 @@ async function resourceScopedAuth(req, res, next, bearer, apiKeyData) {
     const ipAllowed = await checkIPAllowlist(req.ip, resource.ip_allowlist);
     if (!ipAllowed) {
       return res.status(403).json({
-        success: false,
         error: {
           code: 'AUTHZ_IP_NOT_ALLOWED',
           message: 'IP address not in allowlist'
-        }
+        },
+        request_id: req.id || req.headers['x-request-id'],
+        timestamp: new Date().toISOString()
       });
     }
   }
@@ -202,10 +222,15 @@ async function resourceScopedAuth(req, res, next, bearer, apiKeyData) {
   req.user = req.auth.user;
   req.tenant_id = req.auth.tenant_id;
   
+  // ENTERPRISE: Enrich context for RBAC & Rate Limiting
+  req.subject_id = hasJWT ? hasJWT.user.id : hasKey.key_id; // Rate limit subject
+  req.scopes = req.auth.scopes || [];                       // For RBAC checks
+  
   logger.debug('Auth: Resource-scoped profile matched', {
     resource: resource.name,
     profile,
-    auth_type: req.auth.type
+    auth_type: req.auth.type,
+    subject_id: req.subject_id
   });
   
   return next();
@@ -213,65 +238,81 @@ async function resourceScopedAuth(req, res, next, bearer, apiKeyData) {
 
 /**
  * Extract JWT from Authorization header
+ * 
+ * SECURITY: Never log token content (even partial) - token leak prevention
  */
 function extractJWT(req) {
   const authHeader = req.headers.authorization;
-  logger.debug('extractJWT', { 
-    hasHeader: !!authHeader,
-    headerStart: authHeader?.substring(0, 20)
-  });
   
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    logger.debug('extractJWT: Extracted', { tokenLength: token.length });
+    logger.debug('extractJWT: Token present', { length: token.length });
     return token;
   }
   
-  logger.debug('extractJWT: No Bearer token found');
+  logger.debug('extractJWT: No Bearer token');
   return null;
 }
 
 /**
  * Extract API Key credentials from headers
+ * 
+ * SECURITY: No email required (prevents identity leak + spoof)
+ * Key is opaque, we find user from key_hash
  */
 function extractAPIKey(req) {
-  const email = req.headers['x-email'];
   const apiKey = req.headers['x-api-key'];
   const apiPassword = req.headers['x-api-password'];
+  const email = req.headers['x-email']; // Optional (backward compat, not used for auth)
   
   return {
-    email,
     apiKey,
     apiPassword,
-    hasCredentials: !!(email && apiKey && apiPassword)
+    email, // Optional, for logging/audit only
+    hasCredentials: !!(apiKey && apiPassword) // Email NOT required!
   };
 }
 
 /**
  * Verify JWT token
+ * 
+ * ENTERPRISE SECURITY:
+ * - Algorithm whitelist (prevent alg confusion attacks)
+ * - Issuer/Audience validation
+ * - Clock tolerance
+ * - JTI revocation check (TODO: Redis/DB blacklist)
  */
 async function verifyJWT(token, req) {
   const jwt = require('jsonwebtoken');
   
   try {
-    logger.debug('verifyJWT: Starting verification', { 
-      tokenLength: token?.length,
-      hasSecret: !!process.env.JWT_SECRET 
-    });
+    // JWT verification options (SECURITY HARDENED)
+    const opts = {
+      algorithms: ['HS256'],                            // Whitelist only allowed algorithms
+      issuer: process.env.JWT_ISSUER || 'hzm.backend', // Validate issuer
+      audience: process.env.JWT_AUDIENCE || 'hzm.api', // Validate audience
+      clockTolerance: 5                                 // Allow 5s clock skew
+    };
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    logger.debug('verifyJWT: Token decoded', { 
-      claims: Object.keys(decoded),
-      userId: decoded.userId,
-      tenantId: decoded.tenantId
-    });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, opts);
     
     // Token should have userId and tenantId (from /auth/login)
     if (!decoded.userId || !decoded.tenantId) {
-      logger.warn('JWT missing required claims', { decoded });
+      logger.warn('JWT missing required claims', { 
+        hasUserId: !!decoded.userId, 
+        hasTenantId: !!decoded.tenantId 
+      });
       return null;
     }
+    
+    // TODO: Check JTI blacklist (logout/rotation)
+    // if (decoded.jti) {
+    //   const isRevoked = await checkJTIBlacklist(decoded.jti);
+    //   if (isRevoked) {
+    //     logger.warn('JWT revoked', { jti: decoded.jti });
+    //     return null;
+    //   }
+    // }
     
     // Normalize to consistent format
     const user = {
@@ -280,18 +321,19 @@ async function verifyJWT(token, req) {
       role: decoded.role
     };
     
-    logger.debug('verifyJWT: Success', { user_id: user.id, tenant_id: decoded.tenantId });
+    logger.debug('verifyJWT: Valid', { user_id: user.id, tenant_id: decoded.tenantId });
     
     return {
       user,
       tenant_id: decoded.tenantId,
       token_id: decoded.jti,
-      expires_at: decoded.exp
+      expires_at: decoded.exp,
+      scopes: decoded.scopes || [] // For RBAC
     };
   } catch (error) {
-    logger.error('JWT verification failed:', { 
-      error: error.message,
-      stack: error.stack?.split('\n')[0]
+    logger.warn('JWT verification failed', { 
+      reason: error.message,
+      name: error.name // JsonWebTokenError, TokenExpiredError, NotBeforeError
     });
     return null;
   }
@@ -299,39 +341,66 @@ async function verifyJWT(token, req) {
 
 /**
  * Verify API Key credentials
+ * 
+ * SECURITY IMPROVEMENTS:
+ * - No email required (find user by key_hash only)
+ * - Check user suspension status
+ * - Never log full key_hash (max 8 chars preview in dev mode)
  */
 async function verifyAPIKey(apiKeyData, req) {
   const db = require('../core/database');
   const bcrypt = require('bcrypt');
   const crypto = require('crypto');
   
-  const { email, apiKey, apiPassword } = apiKeyData;
+  const { apiKey, apiPassword, email } = apiKeyData;
   
   // Hash the API key (SHA-256)
   const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
   
-  // Query database
+  // Query database (NO email required, find by key_hash only)
   const result = await db.query(`
     SELECT 
       ak.id, ak.key_hash, ak.api_password_hash, ak.scopes, ak.is_active,
-      u.id as user_id, u.email, u.tenant_id, u.role
+      u.id as user_id, u.email, u.tenant_id, u.role, u.is_deleted,
+      COALESCE(u.is_suspended, FALSE) as is_suspended
     FROM core.api_keys ak
     JOIN core.users u ON ak.user_id = u.id
-    WHERE u.email = $1 AND ak.key_hash = $2 AND ak.is_active = TRUE AND u.is_deleted = FALSE
-  `, [email, keyHash]);
+    WHERE ak.key_hash = $1 AND ak.is_active = TRUE
+  `, [keyHash]);
   
   if (result.rows.length === 0) {
-    logger.warn('API Key not found', { email, keyHash: keyHash.substring(0, 8) });
+    logger.warn('API Key not found', { 
+      keyPreview: config.isDevelopment ? keyHash.substring(0, 8) : '[REDACTED]'
+    });
     return null;
   }
   
   const key = result.rows[0];
   
+  // Check user status (deleted or suspended)
+  if (key.is_deleted || key.is_suspended) {
+    logger.warn('API Key user inactive', { 
+      user_id: key.user_id, 
+      deleted: key.is_deleted, 
+      suspended: key.is_suspended 
+    });
+    return null;
+  }
+  
   // Verify password
   const passwordMatch = await bcrypt.compare(apiPassword, key.api_password_hash);
   if (!passwordMatch) {
-    logger.warn('API Key password mismatch', { email });
+    logger.warn('API Key password mismatch', { key_id: key.id });
     return null;
+  }
+  
+  // Optional: Validate email if provided (audit/logging only, not for auth)
+  if (email && key.email !== email) {
+    logger.warn('API Key email mismatch (non-blocking)', { 
+      provided: email, 
+      actual: key.email 
+    });
+    // Don't fail, email is optional
   }
   
   return {
@@ -342,7 +411,7 @@ async function verifyAPIKey(apiKeyData, req) {
     },
     tenant_id: key.tenant_id,
     key_id: key.id,
-    scopes: key.scopes
+    scopes: key.scopes || []
   };
 }
 
