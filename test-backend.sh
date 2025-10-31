@@ -9,7 +9,8 @@ API_KEY="hzm_master_admin_2025_secure_key_01234567890"
 API_PASSWORD="MasterAdmin2025!SecurePassword"
 
 echo "========================================="
-echo "HZM Backend Test Script - Week 4"
+echo "HZM Backend Test Script - Phase 3"
+echo "Week 4 + Phase 3 (Organizations + RBAC)"
 echo "========================================="
 echo ""
 
@@ -112,8 +113,62 @@ curl -s --max-time 15 \
   "$API_URL/api/v1/data/tenants/count" | python3 -m json.tool
 echo ""
 
-# Test 12: OpenAPI Spec (Week 4)
-echo "12. OpenAPI Specification (JSON)..."
+# Test 12: Organizations GET (Phase 3)
+echo "12. Generic Handler - Organizations GET..."
+curl -s --max-time 15 \
+  -H "X-Email: $EMAIL" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Password: $API_PASSWORD" \
+  "$API_URL/api/v1/data/organizations" | python3 -m json.tool
+echo ""
+
+# Test 13: Organizations COUNT (Phase 3)
+echo "13. Generic Handler - Organizations COUNT..."
+curl -s --max-time 15 \
+  -H "X-Email: $EMAIL" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Password: $API_PASSWORD" \
+  "$API_URL/api/v1/data/organizations/count" | python3 -m json.tool
+echo ""
+
+# Test 14: Roles Check (Phase 3)
+echo "14. RBAC - Roles Table Check..."
+curl -s --max-time 15 \
+  -H "X-Email: $EMAIL" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Password: $API_PASSWORD" \
+  "$API_URL/api/v1/admin/database/query" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT name, slug, scope, is_system_role, color FROM core.roles WHERE is_system_role = TRUE ORDER BY CASE slug WHEN '\''platform-admin'\'' THEN 1 WHEN '\''tenant-owner'\'' THEN 2 WHEN '\''admin'\'' THEN 3 WHEN '\''member'\'' THEN 4 WHEN '\''viewer'\'' THEN 5 END"}' | \
+  python3 -m json.tool
+echo ""
+
+# Test 15: Permissions Count (Phase 3)
+echo "15. RBAC - Permissions Count..."
+curl -s --max-time 15 \
+  -H "X-Email: $EMAIL" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Password: $API_PASSWORD" \
+  "$API_URL/api/v1/admin/database/query" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT category, COUNT(*) as permission_count FROM core.permissions GROUP BY category ORDER BY category"}' | \
+  python3 -m json.tool
+echo ""
+
+# Test 16: Role-Permission Mappings (Phase 3)
+echo "16. RBAC - Role-Permission Mappings..."
+curl -s --max-time 15 \
+  -H "X-Email: $EMAIL" \
+  -H "X-API-Key: $API_KEY" \
+  -H "X-API-Password: $API_PASSWORD" \
+  "$API_URL/api/v1/admin/database/query" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT r.name as role_name, COUNT(rp.id) as permission_count FROM core.roles r LEFT JOIN core.role_permissions rp ON r.id = rp.role_id WHERE r.is_system_role = TRUE GROUP BY r.id, r.name ORDER BY permission_count DESC"}' | \
+  python3 -m json.tool
+echo ""
+
+# Test 17: OpenAPI Spec (Week 4)
+echo "17. OpenAPI Specification (JSON)..."
 curl -s --max-time 15 "$API_URL/api/v1/admin/docs/openapi.json" | \
   python3 -c "
 import sys, json
@@ -134,13 +189,15 @@ echo ""
 echo "========================================="
 echo "Test Summary"
 echo "========================================="
-echo "Total Tests: 12"
+echo "Total Tests: 17"
 echo ""
 echo "Expected Results:"
 echo "- Health checks: OK"
-echo "- Projects: is_enabled=true (Active)"
-echo "- Users: is_enabled=true (Active - Week 4)"
-echo "- Tenants: is_enabled=true (Active - Week 4)"
+echo "- Week 4 Resources: projects, users, tenants (Active)"
+echo "- Phase 3 Resources: organizations (Active)"
+echo "- RBAC: 5 system roles (platform-admin, tenant-owner, admin, member, viewer)"
+echo "- Permissions: 35+ permissions across 10+ categories"
+echo "- Role-Permission Mappings: Platform Admin = All permissions"
 echo "- OpenAPI: Auto-generated docs available"
 echo "- Metrics: Request tracking active"
 echo ""
