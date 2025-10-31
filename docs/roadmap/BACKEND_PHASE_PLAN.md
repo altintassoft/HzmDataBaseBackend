@@ -1048,6 +1048,200 @@ CREATE TABLE ops.break_glass_tokens (
   - Archive old history (>1 year) to cold storage
   - Compression for `old_value` and `new_value` TEXT fields
 
+#### 4.7 Resource-Scoped Auth Profiles (🆕 A+ PLAN - Enterprise-Grade Security) 🏆
+
+> **Status**: 2-Phase Implementation (Quick Fix → Enterprise)  
+> **Priority**: P0 (Quick Fix) | P1 (Full Implementation)  
+> **Implementation**: **PR-1 (NOW)** → Schema + Flag | **PR-2 (Phase 4)** → Enable Enforcement
+
+**Problem**: Frontend JWT kullanıyor, `/api/v1/data/*` sadece API Key kabul ediyor → 401 hataları
+
+**Solution**: Resource-bazlı auth profiles (JWT_ONLY | APIKEY_ONLY | EITHER | JWT_AND_APIKEY)
+
+---
+
+##### **PR-1: Schema + Feature Flag (ŞİMDİ - 30 dakika)** 🚀
+
+**Amaç**: Infrastructure hazır, davranış aynı, frontend çalışır
+
+- [x] **Migration 020**: Schema Extension
+  ```sql
+  ALTER TABLE api_resources
+    ADD COLUMN auth_profile TEXT NOT NULL DEFAULT 'EITHER',
+    ADD COLUMN require_hmac BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN ip_allowlist CIDR[] NOT NULL DEFAULT '{}',
+    ADD COLUMN rate_limit_profile TEXT DEFAULT 'standard';
+
+  -- Profile enum (optional validation)
+  CREATE TYPE auth_profile_enum AS ENUM (
+    'JWT_ONLY', 'APIKEY_ONLY', 'EITHER', 'JWT_AND_APIKEY'
+  );
+
+  -- Seed admin resources (future enforcement)
+  UPDATE api_resources 
+  SET auth_profile='JWT_AND_APIKEY', require_hmac=TRUE, rate_limit_profile='strict'
+  WHERE name LIKE 'admin.%';
+
+  -- Seed user/tenant resources
+  UPDATE api_resources SET auth_profile='JWT_ONLY'
+  WHERE name IN ('users', 'tenants');
+  ```
+
+- [x] **Feature Flag**: Environment variable
+  ```bash
+  ENABLE_AUTH_PROFILES=false  # Default: disabled (Phase 1)
+  # Set to 'true' in Phase 4 for enforcement
+  ```
+
+- [x] **Middleware**: authDispatch (feature flagged)
+  ```javascript
+  // src/middleware/authDispatch.js
+  async function authDispatch(req, res, next) {
+    const bearer = extractJWT(req);
+    const apiKey = extractAPIKey(req);
+
+    // Phase 1 (NOW): Simple hybrid (backward compatible)
+    if (!config.features.enableAuthProfiles) {
+      if (bearer) return authenticateJWT(req, res, next);
+      if (apiKey) return authenticateAPIKey(req, res, next);
+      return res.status(401).json({ error: 'Auth required' });
+    }
+
+    // Phase 4 (LATER): Resource-scoped enforcement
+    const resource = await registry.getResource(req);
+    const profile = resource?.auth_profile || 'EITHER';
+    
+    const hasJWT = bearer && await verifyJWT(bearer);
+    const hasKey = apiKey && await verifyAPIKey(apiKey);
+    
+    const authOk = validateAuthProfile(profile, hasJWT, hasKey);
+    if (!authOk) {
+      return res.status(401).json({
+        error: { code: 'AUTH_PROFILE_MISMATCH', required: profile }
+      });
+    }
+
+    // HMAC check (if required)
+    if (resource.require_hmac && !await verifyHMAC(req)) {
+      return res.status(401).json({ error: { code: 'AUTH_HMAC_REQUIRED' }});
+    }
+
+    // IP allowlist
+    if (resource.ip_allowlist?.length && !isAllowedIP(req.ip, resource.ip_allowlist)) {
+      return res.status(403).json({ error: { code: 'AUTHZ_IP_NOT_ALLOWED' }});
+    }
+
+    req.auth = hasJWT ? { type: 'jwt', ...jwtClaims } : { type: 'apikey', ...keyClaims };
+    next();
+  }
+  ```
+
+- [x] **OpenAPI Extension**: Auto-document auth profiles
+  ```javascript
+  // OpenAPI generator'a x-auth-profile, x-require-hmac, x-rate-limit-profile ekle
+  resource['x-auth-profile'] = resource.auth_profile;
+  if (resource.require_hmac) resource['x-require-hmac'] = true;
+  ```
+
+- [x] **DoD (Definition of Done)**:
+  - Migration çalışıyor (up/down)
+  - Mevcut testler yeşil (davranış değişmedi)
+  - Frontend çalışıyor (JWT ile projects create)
+  - API Keys hala çalışıyor (backward compatible)
+  - OpenAPI'da x-auth-profile görünüyor
+
+---
+
+##### **PR-2: Enable Enforcement (PHASE 4)** 🔓
+
+**Tek satır değişiklik:**
+```bash
+# Railway Environment Variables
+ENABLE_AUTH_PROFILES=true  # ← Flag'i aç
+```
+
+**Profile Matrisi (Enforcement Aktif):**
+
+| Resource | Auth Profile | HMAC | IP Allowlist | Rate Limit |
+|----------|-------------|------|--------------|------------|
+| projects | EITHER | false | - | standard |
+| users | JWT_ONLY | false | - | standard |
+| tenants | JWT_ONLY | true | - | standard |
+| organizations | EITHER | false | - | standard |
+| admin.* | JWT_AND_APIKEY | true | ✅ optional | strict |
+| webhooks.ingest | APIKEY_ONLY | true | ✅ source-based | standard |
+
+**Rate Limit Profiles:**
+```javascript
+const RATE_PROFILES = {
+  standard: { rpm: 60, rph: 1000 },
+  strict: { rpm: 10, rph: 100 },    // Admin endpoints
+  generous: { rpm: 300, rph: 5000 }  // Public APIs
+};
+```
+
+**Test Senaryoları:**
+```bash
+# projects (EITHER): JWT ✅ / API Key ✅ / both ✅ / none ❌ (401)
+curl -H "Authorization: Bearer JWT" /api/v1/data/projects  # ✅
+curl -H "X-API-Key: KEY" -H "X-API-Password: PASS" /api/v1/data/projects  # ✅
+
+# users (JWT_ONLY): JWT ✅ / API Key ❌ (401)
+curl -H "Authorization: Bearer JWT" /api/v1/data/users  # ✅
+curl -H "X-API-Key: KEY" /api/v1/data/users  # ❌ 401 AUTH_PROFILE_MISMATCH
+
+# admin (JWT_AND_APIKEY + HMAC): All required ✅ / any missing ❌
+curl -H "Authorization: Bearer JWT" \
+     -H "X-API-Key: KEY" \
+     -H "X-API-Password: PASS" \
+     -H "X-Timestamp: $(date +%s)" \
+     -H "X-Nonce: $(uuidgen)" \
+     -H "X-Signature: HMAC_SHA256" \
+     /api/v1/data/admin  # ✅
+
+# Replay attack test (same nonce)
+curl ... -H "X-Nonce: same-nonce" ...  # ❌ 401 (nonce in Redis)
+```
+
+**Rollback Strategy:**
+```bash
+# Option 1: Disable flag
+ENABLE_AUTH_PROFILES=false  # → Back to simple hybrid
+
+# Option 2: Reset all profiles to EITHER
+UPDATE api_resources SET auth_profile='EITHER';  # → Universal access
+```
+
+---
+
+##### **Business Impact**
+
+**Phase 1 (PR-1):**
+- ✅ Frontend çalışır (JWT accepted)
+- ✅ API Keys çalışır (backward compatible)
+- ✅ Infrastructure hazır (zero refactor for Phase 4)
+- ✅ OpenAPI dokümanı güncel
+
+**Phase 4 (PR-2):**
+- ✅ Admin sertleştirme (JWT + API Key + HMAC)
+- ✅ Users/Tenants güvenlik (JWT only)
+- ✅ Webhooks izolasyon (API Key only + HMAC)
+- ✅ Rate limiting per-profile
+- ✅ IP allowlist per-resource
+- ✅ Enterprise-ready architecture
+
+**Gelecek Uyumu:**
+- mTLS → Yeni profile: `MTLS_ONLY`
+- DPoP → Yeni profile: `DPOP_REQUIRED`
+- Service Account JWT → Profile: `SERVICE_JWT_ONLY`
+- OAuth2 → Profile: `OAUTH2_BEARER`
+
+**Operasyonel Avantajlar:**
+- Config-driven (kod değişikliği yok)
+- Canary rollout kolay (resource-by-resource)
+- Audit trail tam (hangi resource ne kabul ediyor)
+- Compliance-ready (SOC2, ISO27001)
+
 ### ✅ Definition of Done
 - [x] Redis bağlantısı çalışıyor
 - [x] Cache middleware aktif

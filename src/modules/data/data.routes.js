@@ -1,6 +1,6 @@
 const express = require('express');
 const DataController = require('./data.controller');
-const { authenticateApiKey } = require('../../middleware/auth');
+const { authDispatch } = require('../../middleware/authDispatch'); // A+ Plan: Hybrid auth
 const { trackRequest } = require('../../middleware/metrics');
 const { checkIdempotency } = require('../../middleware/idempotency');
 
@@ -11,23 +11,27 @@ const router = express.Router();
  * Base: /api/v1/data
  * 
  * HAFTA 2 - Generic Handler Implementation
+ * A+ PLAN - Resource-Scoped Auth Profiles (Migration 020)
  * 
  * Middleware chain:
  * 1. trackRequest - Metrics tracking
- * 2. checkIdempotency - Duplicate write protection (POST/PUT/DELETE)
- * 3. authenticateApiKey - 3-layer auth
+ * 2. authDispatch - Hybrid auth (JWT OR API Key, feature-flagged)
+ * 3. checkIdempotency - Duplicate write protection (POST/PUT/DELETE)
  * 4. DataController - CRUD operations
  * 
+ * Authentication Strategy:
+ * - Phase 1 (NOW): Simple hybrid (JWT OR API Key) - backward compatible
+ * - Phase 4 (LATER): Resource-scoped profiles (JWT_ONLY, APIKEY_ONLY, EITHER, JWT_AND_APIKEY)
+ * - Feature Flag: ENABLE_AUTH_PROFILES (default: false)
+ * 
  * Security:
- * - All resources is_enabled=false (403 error)
- * - Manual activation in Week 3
+ * - All resources require is_enabled=true (403 if disabled)
+ * - Authentication required for all data operations
+ * - Special endpoints (_metrics, _health) are public
  */
 
 // Apply global middleware for all routes
 router.use(trackRequest);
-
-// All routes require API Key authentication
-// (Applied in controller level for better error handling)
 
 // ============================================================================
 // SPECIAL ENDPOINTS (Week 4) - MUST BE BEFORE GENERIC ROUTES
@@ -65,19 +69,19 @@ router.get('/_health', DataController.getHealth);
 // More specific routes first, then generic ones
 // ============================================================================
 
-router.post('/:resource/batch', checkIdempotency, authenticateApiKey, DataController.batchCreate);
-router.put('/:resource/batch', checkIdempotency, authenticateApiKey, DataController.batchUpdate);
-router.delete('/:resource/batch', checkIdempotency, authenticateApiKey, DataController.batchDelete);
-router.post('/:resource/search', authenticateApiKey, DataController.search);
-router.get('/:resource/count', authenticateApiKey, DataController.count);
+router.post('/:resource/batch', authDispatch, checkIdempotency, DataController.batchCreate);
+router.put('/:resource/batch', authDispatch, checkIdempotency, DataController.batchUpdate);
+router.delete('/:resource/batch', authDispatch, checkIdempotency, DataController.batchDelete);
+router.post('/:resource/search', authDispatch, DataController.search);
+router.get('/:resource/count', authDispatch, DataController.count);
 
 // Single resource operations
-router.get('/:resource', authenticateApiKey, DataController.list);
-router.post('/:resource', checkIdempotency, authenticateApiKey, DataController.create);
-router.get('/:resource/:id', authenticateApiKey, DataController.getById);
-router.put('/:resource/:id', checkIdempotency, authenticateApiKey, DataController.update);
-router.patch('/:resource/:id', checkIdempotency, authenticateApiKey, DataController.update); // Same as PUT for now
-router.delete('/:resource/:id', checkIdempotency, authenticateApiKey, DataController.delete);
+router.get('/:resource', authDispatch, DataController.list);
+router.post('/:resource', authDispatch, checkIdempotency, DataController.create);
+router.get('/:resource/:id', authDispatch, DataController.getById);
+router.put('/:resource/:id', authDispatch, checkIdempotency, DataController.update);
+router.patch('/:resource/:id', authDispatch, checkIdempotency, DataController.update); // Same as PUT for now
+router.delete('/:resource/:id', authDispatch, checkIdempotency, DataController.delete);
 
 module.exports = router;
 

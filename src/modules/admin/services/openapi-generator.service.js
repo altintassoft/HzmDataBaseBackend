@@ -108,6 +108,9 @@ class OpenAPIGeneratorService {
         r.table_name,
         r.description,
         r.is_readonly,
+        r.auth_profile,
+        r.require_hmac,
+        r.rate_limit_profile,
         json_agg(
           json_build_object(
             'column_name', f.column_name,
@@ -128,7 +131,7 @@ class OpenAPIGeneratorService {
       FROM api_resources r
       LEFT JOIN api_resource_fields f ON f.resource = r.resource
       WHERE r.is_enabled = true
-      GROUP BY r.resource, r.schema_name, r.table_name, r.description, r.is_readonly
+      GROUP BY r.resource, r.schema_name, r.table_name, r.description, r.is_readonly, r.auth_profile, r.require_hmac, r.rate_limit_profile
       ORDER BY r.resource;
     `;
 
@@ -151,6 +154,9 @@ class OpenAPIGeneratorService {
         tags: [ResourceName],
         summary: `List ${resourceName}`,
         description: resource.description || `Retrieve a list of ${resourceName}`,
+        'x-auth-profile': resource.auth_profile || 'EITHER',
+        'x-require-hmac': resource.require_hmac || false,
+        'x-rate-limit-profile': resource.rate_limit_profile || 'standard',
         parameters: [
           {
             name: 'page',
@@ -216,6 +222,9 @@ class OpenAPIGeneratorService {
         tags: [ResourceName],
         summary: `Create ${resourceName}`,
         description: `Create a new ${resourceName} record`,
+        'x-auth-profile': resource.auth_profile || 'EITHER',
+        'x-require-hmac': resource.require_hmac || false,
+        'x-rate-limit-profile': resource.rate_limit_profile || 'standard',
         requestBody: {
           required: true,
           content: {

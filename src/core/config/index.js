@@ -40,7 +40,15 @@ const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
   // Logging
-  logLevel: process.env.LOG_LEVEL || 'info'
+  logLevel: process.env.LOG_LEVEL || 'info',
+
+  // Feature Flags (Phase 4+)
+  features: {
+    // Enable resource-scoped auth profiles (Phase 4)
+    // When false: Simple hybrid auth (JWT OR API Key) - backward compatible
+    // When true: Resource-scoped profiles (JWT_ONLY, APIKEY_ONLY, EITHER, JWT_AND_APIKEY)
+    enableAuthProfiles: process.env.ENABLE_AUTH_PROFILES === 'true'
+  }
 };
 
 module.exports = config;

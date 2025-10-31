@@ -37,16 +37,22 @@ Admin Panel: /admin
 **Migration Status:**
 ```
 001-019: ✅ Deployed (Production)
-020+: ⏳ Planned (Phase 4+)
+020: ⏳ IN PROGRESS - Resource-Scoped Auth Profiles (A+ Plan - PR-1)
+021+: ⏳ Planned (Phase 4+)
 ```
 
 ### 🎯 Sırada Ne Var?
 
-**Frontend Generic Handler Integration (KRİTİK ÖNCELİK!) 🔥**
+**Backend: Resource-Scoped Auth Profiles (A+ PLAN - 30 DK!) 🏆**
 
-> **Durum:** Backend hazır, şimdi Frontend'i Generic Handler'a entegre ediyoruz!
+> **Durum:** Migration 020 - Schema + Feature Flag (Quick Fix → Enterprise)  
+> **Problem:** Frontend JWT kullanıyor, `/api/v1/data/*` sadece API Key kabul ediyor → 401  
+> **Çözüm:** authDispatch middleware (JWT OR API Key - Phase 1 | Profile-based - Phase 4)
 
-**Hedef:** LocalStorage → API migration (Tüm CRUD operations backend'e taşınacak)
+**Frontend Generic Handler Integration (SONRAKI ADIM!) 🔥**
+
+> **Durum:** Backend hazır, auth fix sonrası Frontend entegrasyonuna devam!  
+> **Hedef:** LocalStorage → API migration (Projects, Users, Tables CRUD backend'e taşınacak)
 
 ---
 
