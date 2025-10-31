@@ -132,6 +132,13 @@ async function simpleHybridAuth(req, res, next, bearer, apiKeyData) {
   }
   
   // Neither JWT nor API Key valid - STANDARDIZED ERROR RESPONSE
+  logger.error('Authentication failed - No valid credentials', {
+    had_bearer: !!bearer,
+    had_api_key: !!apiKeyData.hasCredentials,
+    path: req.path,
+    method: req.method
+  });
+  
   return res.status(401).json({
     error: { 
       code: 'AUTH_REQUIRED', 
@@ -331,9 +338,12 @@ async function verifyJWT(token, req) {
       scopes: decoded.scopes || [] // For RBAC
     };
   } catch (error) {
-    logger.warn('JWT verification failed', { 
+    logger.error('JWT verification failed (DETAILS)', { 
       reason: error.message,
-      name: error.name // JsonWebTokenError, TokenExpiredError, NotBeforeError
+      name: error.name, // JsonWebTokenError, TokenExpiredError, NotBeforeError
+      tokenLength: token?.length,
+      envIssuer: process.env.JWT_ISSUER || 'hzm.backend (default)',
+      envAudience: process.env.JWT_AUDIENCE || 'hzm.api (default)'
     });
     return null;
   }
