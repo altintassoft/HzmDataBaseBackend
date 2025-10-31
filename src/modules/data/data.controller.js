@@ -199,8 +199,21 @@ class DataController {
       }
 
       // tenant_id inject et (varsa)
+      logger.debug('CREATE tenant_id injection', {
+        has_user: !!req.user,
+        user_tenant_id: req.user?.tenant_id,
+        req_tenant_id: req.tenant_id,
+        has_tenant_column: meta.writableColumns.includes('tenant_id'),
+        writable_columns: meta.writableColumns
+      });
+      
       if (req.user?.tenant_id && meta.writableColumns.includes('tenant_id')) {
         data.tenant_id = req.user.tenant_id;
+        logger.debug('tenant_id injected', { tenant_id: data.tenant_id });
+      } else {
+        logger.warn('tenant_id NOT injected', {
+          reason: !req.user?.tenant_id ? 'req.user.tenant_id missing' : 'tenant_id not in writableColumns'
+        });
       }
 
       // Boş data kontrolü
