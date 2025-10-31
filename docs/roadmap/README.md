@@ -42,7 +42,93 @@ Admin Panel: /admin
 
 ### 🎯 Sırada Ne Var?
 
-**Phase 4: Infrastructure (2 hafta) ⚡ P1**
+**Frontend Generic Handler Integration (KRİTİK ÖNCELİK!) 🔥**
+
+> **Durum:** Backend hazır, şimdi Frontend'i Generic Handler'a entegre ediyoruz!
+
+**Hedef:** LocalStorage → API migration (Tüm CRUD operations backend'e taşınacak)
+
+---
+
+### 📋 TODO LİSTESİ - Frontend API Integration (47 Madde)
+
+#### **Phase 1: API Infrastructure** 🔧
+- [ ] 1. API Client Enhancement - Generic Handler client (GET/POST/PUT/DELETE, error handling, retry)
+- [ ] 2. Types Güncelleme - Backend response types (ApiResponse, PaginatedResponse, ErrorResponse)
+- [ ] 📦 GIT-1: Phase 1 backup (commit + push)
+- [ ] ✅ TEST-1: API Client test et
+
+#### **Phase 2A: Resource APIs** 🔗
+- [ ] 3. Projects API Integration (GET/POST/PUT/DELETE /api/v1/data/projects)
+- [ ] 4. Users API Integration (GET/POST/PUT/DELETE /api/v1/data/users)
+- [ ] 5. Tenants API Integration (GET/POST/PUT /api/v1/data/tenants)
+- [ ] 6. Organizations API Integration (GET/POST/PUT /api/v1/data/organizations)
+- [ ] 📦 GIT-2: Resource APIs backup
+- [ ] ✅ TEST-2: CRUD operations test
+
+#### **Phase 2B: Context Migration** 🔄
+- [ ] 7. DatabaseContext - LOGIN action: Backend /auth/login
+- [ ] 8. DatabaseContext - REGISTER action: Backend /auth/register
+- [ ] 9. DatabaseContext - ADD_PROJECT: POST /api/v1/data/projects
+- [ ] 10. DatabaseContext - UPDATE_PROJECT: PUT /api/v1/data/projects/:id
+- [ ] 11. DatabaseContext - DELETE_PROJECT: DELETE /api/v1/data/projects/:id
+- [ ] 12. DatabaseContext - LocalStorage operations kaldır (all_projects, table_data)
+- [ ] 📦 GIT-3: Context migration backup
+- [ ] ✅ TEST-3: Context + API integration test
+
+#### **Phase 3A: Admin Pages** 📱
+- [ ] 13. Admin Pages - DatabaseUsersPage: API'den users çek, CRUD → API
+- [ ] 14. Admin Pages - DatabaseProjectsPage: API'den projects çek, CRUD → API
+- [ ] 15. Admin Pages - DatabaseStatePage: API'den tenant stats (metrics endpoint)
+- [ ] 📦 GIT-4: Admin pages backup
+- [ ] ✅ TEST-4: Admin panel CRUD test
+
+#### **Phase 3B: Customer & Projects Pages** 👤📂
+- [ ] 16. Customer Pages - DashboardPage: User projects API'den çek
+- [ ] 17. Customer Pages - UserSettingsPage: User info API'den çek/güncelle
+- [ ] 18. Projects Pages - ProjectsListPage: GET /api/v1/data/projects
+- [ ] 19. Projects Pages - ProjectDetailPage: GET /api/v1/data/projects/:id
+- [ ] 20. Projects Pages - ProjectDataPage: Project data API'ye bağla
+- [ ] 📦 GIT-5: User flow backup
+- [ ] ✅ TEST-5: User flow test
+
+#### **Phase 4A: Loading & Errors** ⚡
+- [ ] 21. Loading States - useLoading hook, spinners
+- [ ] 22. Error Handling - Global error handler (toast, error boundary)
+- [ ] 23. Error Handling - User-friendly error messages (401/403/404/500)
+- [ ] 24. Authentication Flow - JWT token refresh logic
+- [ ] 25. Authentication Flow - Auto-logout on 401
+- [ ] 📦 GIT-6: Error handling backup
+- [ ] ✅ TEST-6: Error handling test
+
+#### **Phase 4B: UX Improvements** 🔍🚀
+- [ ] 26. Pagination Support - limit, offset, page, pageSize
+- [ ] 27. Search & Filter - Projects, Users, Organizations
+- [ ] 28. Optimistic Updates - Instant UI feedback
+- [ ] 29. Cache Strategy - Client-side caching (React Query/custom)
+- [ ] 📦 GIT-7: UX improvements backup
+- [ ] ✅ TEST-7: UX features test
+
+#### **Phase 5: Automated Testing** 🧪
+- [ ] 30. Testing - API client unit tests (jest/vitest)
+- [ ] 31. Testing - DatabaseContext integration tests
+- [ ] 32. Testing - Admin pages E2E tests
+- [ ] 📦 GIT-8: Testing backup
+
+#### **Phase 6: Production Deploy** 🌍🚢
+- [ ] 33. Environment Variables - .env.production, .env.development
+- [ ] 34. Build & Deploy - Netlify deployment + API URL production
+- [ ] 35. Smoke Test - Production'da full flow test
+- [ ] 📦 GIT-FINAL: Production deployment (tag v2.0.0)
+- [ ] ✅ TEST-PROD: Regression test suite
+
+**Toplam:** 35 development + 9 git backups + 8 tests = **47 madde**
+
+**Tahmini Süre:** 3-5 gün (phase by phase)
+
+---
+
+**Backend Phase 4: Infrastructure (Sonraki Sprint) ⏳**
 - [ ] Redis setup (cache, session, rate limiting)
 - [ ] Job Queue (BullMQ - email, webhook, report queues)
 - [ ] File Storage (S3/R2 - upload, image processing)
