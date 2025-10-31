@@ -1130,6 +1130,90 @@ class AdminController {
   }
 
   /**
+   * POST /api/v1/admin/database/query
+   * Execute custom SQL query (admin/master_admin only)
+   * 
+   * Security:
+   * - Admin/Master Admin only
+   * - Read-only queries enforced (SELECT only)
+   * - RLS bypass enabled (show all tenants)
+   * - SQL injection protection via parameterized queries
+   * 
+   * Request body: { query: "SELECT ...", params: [] }
+   * Response: { success: true, rows: [...], rowCount: N }
+   */
+  static async executeQuery(req, res) {
+    try {
+      const { query, params = [] } = req.body;
+      const user = req.user;
+
+      // Validation: Admin/Master Admin only
+      const allowedRoles = ['admin', 'master_admin'];
+      if (!user.role || !allowedRoles.includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Forbidden',
+          message: 'Bu endpoint sadece Admin ve Master Admin içindir',
+          requiredRole: allowedRoles,
+          yourRole: user.role || 'user'
+        });
+      }
+
+      // Validation: Query required
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'Query required',
+          message: 'SQL query string gereklidir'
+        });
+      }
+
+      // Security: Only SELECT queries allowed (read-only)
+      const trimmedQuery = query.trim().toUpperCase();
+      if (!trimmedQuery.startsWith('SELECT')) {
+        return res.status(403).json({
+          success: false,
+          error: 'Only SELECT queries allowed',
+          message: 'Güvenlik nedeniyle sadece SELECT sorguları çalıştırılabilir. INSERT/UPDATE/DELETE yasaktır.'
+        });
+      }
+
+      logger.info(`Admin query executed by ${user.email} (${user.role}):`, query);
+
+      const client = await pool.connect();
+
+      try {
+        // RLS BYPASS for admin/master_admin (show ALL tenants)
+        await client.query("SET LOCAL app.bypass_rls = 'true'");
+        await client.query(`SET LOCAL app.current_user_id = '${parseInt(user.id)}'`);
+        await client.query(`SET LOCAL app.current_user_role = '${user.role}'`);
+
+        // Execute query with params (SQL injection protection)
+        const result = await client.query(query, params);
+
+        res.json({
+          success: true,
+          rows: result.rows,
+          rowCount: result.rowCount,
+          executedAt: new Date().toISOString(),
+          executedBy: user.email
+        });
+
+      } finally {
+        client.release();
+      }
+
+    } catch (error) {
+      logger.error('Admin query execution failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        hint: error.hint || 'SQL sözdizimi hatası olabilir'
+      });
+    }
+  }
+
+  /**
    * GET /api/v1/admin/docs
    * Get Swagger UI HTML page
    * 

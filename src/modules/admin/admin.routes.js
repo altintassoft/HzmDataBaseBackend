@@ -115,6 +115,25 @@ router.post('/exchange-rates', authenticateJwtOrApiKey, AdminController.updateEx
  */
 router.get('/table-data/:schema/:table', authenticateJwtOrApiKey, AdminController.getTableData);
 
+/**
+ * Execute Custom SQL Query
+ * POST /api/v1/admin/database/query
+ * 
+ * Execute custom SQL queries (SELECT only, read-only)
+ * Useful for production debugging, data analysis, reporting
+ * 
+ * Body: { query: "SELECT ...", params: [] }
+ * 
+ * Security:
+ * - Admin/Master Admin only
+ * - SELECT queries only (no INSERT/UPDATE/DELETE)
+ * - RLS bypass enabled (show all tenants)
+ * - SQL injection protection via parameterized queries
+ * 
+ * Auth: Admin or Master Admin only
+ */
+router.post('/database/query', authenticateJwtOrApiKey, AdminController.executeQuery);
+
 // ============================================================================
 // AI KNOWLEDGE BASE ROUTES (Master Admin Only)
 // ============================================================================
