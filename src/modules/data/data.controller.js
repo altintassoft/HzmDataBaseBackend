@@ -198,21 +198,15 @@ class DataController {
         }
       }
 
-      // tenant_id inject et (varsa)
-      logger.debug('CREATE tenant_id injection', {
-        has_user: !!req.user,
-        user_tenant_id: req.user?.tenant_id,
-        req_tenant_id: req.tenant_id,
-        has_tenant_column: meta.writableColumns.includes('tenant_id'),
-        writable_columns: meta.writableColumns
-      });
-      
-      if (req.user?.tenant_id && meta.writableColumns.includes('tenant_id')) {
+      // tenant_id inject et (SYSTEM COLUMN - always inject if exists in table)
+      // Don't check writableColumns - tenant_id is a system column managed by backend
+      if (req.user?.tenant_id && meta.readableColumns.includes('tenant_id')) {
         data.tenant_id = req.user.tenant_id;
-        logger.debug('tenant_id injected', { tenant_id: data.tenant_id });
-      } else {
-        logger.warn('tenant_id NOT injected', {
-          reason: !req.user?.tenant_id ? 'req.user.tenant_id missing' : 'tenant_id not in writableColumns'
+        logger.debug('tenant_id injected (system column)', { tenant_id: data.tenant_id });
+      } else if (!req.user?.tenant_id) {
+        logger.warn('tenant_id NOT injected - req.user.tenant_id missing', {
+          has_user: !!req.user,
+          req_tenant_id: req.tenant_id
         });
       }
 
