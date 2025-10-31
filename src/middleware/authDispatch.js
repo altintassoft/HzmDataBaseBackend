@@ -94,14 +94,14 @@ async function simpleHybridAuth(req, res, next, bearer, apiKeyData) {
       const jwtAuth = await verifyJWT(bearer, req);
       if (jwtAuth) {
         req.auth = { type: 'jwt', ...jwtAuth };
-        req.user = jwtAuth.user;
+        req.user = { ...jwtAuth.user, tenant_id: jwtAuth.tenant_id }; // Fix: Add tenant_id to req.user
         req.tenant_id = jwtAuth.tenant_id;
         
         // ENTERPRISE: Enrich context for RBAC & Rate Limiting
         req.subject_id = jwtAuth.user.id;
         req.scopes = jwtAuth.scopes || [];
         
-        logger.debug('Auth: JWT accepted', { user_id: jwtAuth.user.id, subject_id: req.subject_id });
+        logger.debug('Auth: JWT accepted', { user_id: jwtAuth.user.id, tenant_id: req.tenant_id });
         return next();
       }
     } catch (error) {
@@ -116,14 +116,14 @@ async function simpleHybridAuth(req, res, next, bearer, apiKeyData) {
       const keyAuth = await verifyAPIKey(apiKeyData, req);
       if (keyAuth) {
         req.auth = { type: 'apikey', ...keyAuth };
-        req.user = keyAuth.user;
+        req.user = { ...keyAuth.user, tenant_id: keyAuth.tenant_id }; // Fix: Add tenant_id to req.user
         req.tenant_id = keyAuth.tenant_id;
         
         // ENTERPRISE: Enrich context for RBAC & Rate Limiting
         req.subject_id = keyAuth.key_id; // Rate limit by key_id for API Keys
         req.scopes = keyAuth.scopes || [];
         
-        logger.debug('Auth: API Key accepted', { key_id: keyAuth.key_id, subject_id: req.subject_id });
+        logger.debug('Auth: API Key accepted', { key_id: keyAuth.key_id, tenant_id: req.tenant_id });
         return next();
       }
     } catch (error) {
@@ -219,7 +219,7 @@ async function resourceScopedAuth(req, res, next, bearer, apiKeyData) {
   
   // Set auth context (prefer JWT if both exist)
   req.auth = hasJWT ? { type: 'jwt', ...hasJWT } : { type: 'apikey', ...hasKey };
-  req.user = req.auth.user;
+  req.user = { ...req.auth.user, tenant_id: req.auth.tenant_id }; // Fix: Add tenant_id to req.user
   req.tenant_id = req.auth.tenant_id;
   
   // ENTERPRISE: Enrich context for RBAC & Rate Limiting
