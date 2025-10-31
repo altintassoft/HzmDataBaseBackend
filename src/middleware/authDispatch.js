@@ -11,13 +11,24 @@
 
 const config = require('../core/config');
 const logger = require('../core/logger');
+const db = require('../core/database');
 
 /**
  * Auth Dispatch - Main entry point
  * 
- * Determines authentication strategy based on feature flag:
- * - ENABLE_AUTH_PROFILES=false (default): Simple hybrid (JWT OR API Key)
- * - ENABLE_AUTH_PROFILES=true (Phase 4): Resource-scoped profiles
+ * ENTERPRISE-GRADE: Double-gated feature flag + deterministic flow
+ * 
+ * Feature Flag Strategy (Double-Gate):
+ * - ENV flag (ENABLE_AUTH_PROFILES): Application-level control
+ * - DB flag (cfg.feature_flags): Database-level control
+ * - Enforcement ONLY if BOTH flags are TRUE
+ * 
+ * Deterministic Flow (Error Code Consistency):
+ * 1. Auth Profile Check → 401 (AUTH_PROFILE_MISMATCH)
+ * 2. HMAC Verification → 401 (AUTH_HMAC_REQUIRED/AUTH_HMAC_INVALID)
+ * 3. IP Allowlist → 403 (AUTHZ_IP_NOT_ALLOWED)
+ * 4. RBAC → 403 (AUTHZ_PERMISSION_DENIED)
+ * 5. Rate Limit → 429 (RATE_LIMIT_EXCEEDED)
  */
 async function authDispatch(req, res, next) {
   const startTime = Date.now();
@@ -27,12 +38,23 @@ async function authDispatch(req, res, next) {
     const bearer = extractJWT(req);
     const apiKeyData = extractAPIKey(req);
     
-    // Phase 1: Simple Hybrid (backward compatible, feature flag OFF)
-    if (!config.features?.enableAuthProfiles) {
+    // ENTERPRISE: Double-gated feature flag check
+    const envFlagEnabled = config.features?.enableAuthProfiles || false;
+    const dbFlagEnabled = await checkDBFeatureFlag('ENABLE_AUTH_PROFILES');
+    const profileEnforcementActive = envFlagEnabled && dbFlagEnabled;
+    
+    logger.debug('authDispatch: Feature flags', { 
+      env: envFlagEnabled, 
+      db: dbFlagEnabled, 
+      enforcement: profileEnforcementActive 
+    });
+    
+    // Phase 1: Simple Hybrid (backward compatible, enforcement OFF)
+    if (!profileEnforcementActive) {
       return await simpleHybridAuth(req, res, next, bearer, apiKeyData);
     }
     
-    // Phase 4: Resource-Scoped Auth (feature flag ON)
+    // Phase 4: Resource-Scoped Auth (enforcement ON)
     return await resourceScopedAuth(req, res, next, bearer, apiKeyData);
     
   } catch (error) {
@@ -194,9 +216,18 @@ async function resourceScopedAuth(req, res, next, bearer, apiKeyData) {
  */
 function extractJWT(req) {
   const authHeader = req.headers.authorization;
+  logger.debug('extractJWT', { 
+    hasHeader: !!authHeader,
+    headerStart: authHeader?.substring(0, 20)
+  });
+  
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.slice(7); // Remove 'Bearer ' prefix
+    const token = authHeader.slice(7);
+    logger.debug('extractJWT: Extracted', { tokenLength: token.length });
+    return token;
   }
+  
+  logger.debug('extractJWT: No Bearer token found');
   return null;
 }
 
@@ -223,7 +254,18 @@ async function verifyJWT(token, req) {
   const jwt = require('jsonwebtoken');
   
   try {
+    logger.debug('verifyJWT: Starting verification', { 
+      tokenLength: token?.length,
+      hasSecret: !!process.env.JWT_SECRET 
+    });
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    logger.debug('verifyJWT: Token decoded', { 
+      claims: Object.keys(decoded),
+      userId: decoded.userId,
+      tenantId: decoded.tenantId
+    });
     
     // Token should have userId and tenantId (from /auth/login)
     if (!decoded.userId || !decoded.tenantId) {
@@ -238,6 +280,8 @@ async function verifyJWT(token, req) {
       role: decoded.role
     };
     
+    logger.debug('verifyJWT: Success', { user_id: user.id, tenant_id: decoded.tenantId });
+    
     return {
       user,
       tenant_id: decoded.tenantId,
@@ -245,7 +289,10 @@ async function verifyJWT(token, req) {
       expires_at: decoded.exp
     };
   } catch (error) {
-    logger.debug('JWT verification failed:', error.message);
+    logger.error('JWT verification failed:', { 
+      error: error.message,
+      stack: error.stack?.split('\n')[0]
+    });
     return null;
   }
 }
@@ -340,6 +387,46 @@ async function checkIPAllowlist(clientIP, allowlist) {
   // - Check if clientIP in any range
   logger.debug('IP allowlist check (not yet implemented)', { clientIP, allowlist });
   return true; // Temporarily pass
+}
+
+/**
+ * Check DB-level feature flag (double-gate with ENV flag)
+ * 
+ * ENTERPRISE: Database-level feature flag for profile enforcement
+ * Cached for 60 seconds to avoid excessive DB queries
+ */
+let featureFlagCache = {};
+const CACHE_TTL = 60000; // 60 seconds
+
+async function checkDBFeatureFlag(flagKey) {
+  const now = Date.now();
+  
+  // Check cache
+  if (featureFlagCache[flagKey] && (now - featureFlagCache[flagKey].timestamp < CACHE_TTL)) {
+    return featureFlagCache[flagKey].value;
+  }
+  
+  try {
+    const result = await db.query(`
+      SELECT enabled 
+      FROM cfg.feature_flags 
+      WHERE key = $1
+    `, [flagKey]);
+    
+    const enabled = result.rows.length > 0 ? result.rows[0].enabled : false;
+    
+    // Update cache
+    featureFlagCache[flagKey] = {
+      value: enabled,
+      timestamp: now
+    };
+    
+    return enabled;
+  } catch (error) {
+    logger.warn('checkDBFeatureFlag error:', { error: error.message, flagKey });
+    // Fail-safe: return false if DB query fails
+    return false;
+  }
 }
 
 module.exports = {
