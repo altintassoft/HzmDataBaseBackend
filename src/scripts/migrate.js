@@ -23,6 +23,57 @@ function hasForceRerunFlag(content) {
 }
 
 /**
+ * Remove block comments from SQL while preserving them inside dollar-quoted strings
+ */
+function removeBlockComments(sql) {
+  let result = '';
+  let inDollarQuote = false;
+  let inBlockComment = false;
+  
+  for (let i = 0; i < sql.length; i++) {
+    const char = sql[i];
+    const next = sql[i + 1];
+    
+    // Check for $$ (dollar quote start/end)
+    if (char === '$' && next === '$' && !inBlockComment) {
+      inDollarQuote = !inDollarQuote;
+      result += '$$';
+      i++; // skip next $
+      continue;
+    }
+    
+    // Don't process comments inside dollar-quoted strings
+    if (inDollarQuote) {
+      result += char;
+      continue;
+    }
+    
+    // Check for block comment start /*
+    if (char === '/' && next === '*' && !inBlockComment) {
+      inBlockComment = true;
+      i++; // skip *
+      continue;
+    }
+    
+    // Check for block comment end */
+    if (char === '*' && next === '/' && inBlockComment) {
+      inBlockComment = false;
+      i++; // skip /
+      continue;
+    }
+    
+    // Skip characters inside block comments
+    if (inBlockComment) {
+      continue;
+    }
+    
+    result += char;
+  }
+  
+  return result;
+}
+
+/**
  * Execute a single migration file
  */
 async function executeMigration(file, sql, reason = 'new') {
@@ -31,7 +82,12 @@ async function executeMigration(file, sql, reason = 'new') {
   // Split SQL into statements and execute each separately
   // Remove comments first, then split by semicolon
   // BUT: Respect $$ (dollar-quoted strings) - don't split inside them!
-  const cleanSql = sql
+  
+  // Step 1: Remove block comments (/* ... */)
+  let cleanSql = removeBlockComments(sql);
+  
+  // Step 2: Remove single-line comments (--)
+  cleanSql = cleanSql
     .split('\n')
     .filter(line => !line.trim().startsWith('--'))
     .join('\n');
