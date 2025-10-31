@@ -225,15 +225,22 @@ async function verifyJWT(token, req) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Token should have user and tenant_id
-    if (!decoded.user || !decoded.tenant_id) {
+    // Token should have userId and tenantId (from /auth/login)
+    if (!decoded.userId || !decoded.tenantId) {
       logger.warn('JWT missing required claims', { decoded });
       return null;
     }
     
+    // Normalize to consistent format
+    const user = {
+      id: decoded.userId,
+      email: decoded.email,
+      role: decoded.role
+    };
+    
     return {
-      user: decoded.user,
-      tenant_id: decoded.tenant_id,
+      user,
+      tenant_id: decoded.tenantId,
       token_id: decoded.jti,
       expires_at: decoded.exp
     };
