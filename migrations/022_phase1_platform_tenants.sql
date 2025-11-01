@@ -95,7 +95,7 @@ COMMENT ON TABLE platform.users IS
 -- Add new columns to core.tenants
 ALTER TABLE core.tenants
   ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES platform.users(id),
-  ADD COLUMN IF NOT EXISTS titan_id VARCHAR(64) UNIQUE,
+  ADD COLUMN IF NOT EXISTS titan_id VARCHAR(128) UNIQUE,
   ADD COLUMN IF NOT EXISTS project_type VARCHAR(50) DEFAULT 'generic',
   ADD COLUMN IF NOT EXISTS max_organizations INTEGER DEFAULT 100,
   ADD COLUMN IF NOT EXISTS max_users_per_org INTEGER DEFAULT 50;
